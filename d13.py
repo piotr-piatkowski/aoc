@@ -43,7 +43,8 @@ while True:
         print("Part 2:", t)
         break
     elif f > maxf:
-        step *= buses[f-1][1];
+        for i in range(maxf, f):
+            step *= buses[i][1];
         #print(f"==== setting step to {step}")
         maxf = f
     t += step
