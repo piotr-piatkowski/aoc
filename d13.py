@@ -1,11 +1,6 @@
 #!/usr/bin/python3.8
 
-import re
 import sys
-from collections import defaultdict
-from copy import deepcopy
-
-rules = []
 
 if len(sys.argv) > 1:
     path = sys.argv[1]
