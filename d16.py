@@ -41,11 +41,29 @@ with open(path, 'r') as f:
         elif mode == 'your':
             my_ticket = [int(v) for v in line.split(',')]
         elif mode == 'nearby':
-            ticket = [int(v) for v in line.split(',')]
-            if all(v in valid_any for v in ticket):
-                tickets.append(ticket)
+            tickets.append([int(v) for v in line.split(',')])
         else:
             raise Exception(f"Invalid line: {line}")
+
+# ------ Part 1 ------
+
+err = 0
+valid_tickets = []
+
+for t in tickets:
+    valid = True
+    for i, v in enumerate(t):
+        if v not in valid_any:
+            valid = False
+            err += v
+    if valid:
+        valid_tickets.append(t)
+
+print(err)
+tickets = valid_tickets # for the part 2
+
+
+# ------ Part 2 ------
 
 ticket_size = len(my_ticket)
 possible_columns = {k: set(range(ticket_size)) for k in valid_by_key.keys()}
@@ -78,5 +96,4 @@ for i, v in enumerate(my_ticket):
     if column_to_key[i].startswith('departure'):
         n *= v
 print(n)
-
 
