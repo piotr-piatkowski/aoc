@@ -25,16 +25,6 @@ with open(path, 'r') as f:
         else:
             raise Exception(f"line: {line}")
 
-# Transform list of borders
-#def transf(b, perm):
-#    flip = bool(perm & 0x04)
-#    rot = perm % 4
-#    #print(f"perm={perm} flip={flip}, rot={rot}")
-#    top, right, bot, left = b
-#    if flip:
-#        top, right, bot, left = [bot[::-1], right[::-1], top[::-1], left[::-1]]
-#    return ([top, right, bot, left]*2)[rot:rot+4]
-
 def transform(t, tr):
     flip = bool(tr & 0x04)
     rot = tr % 4
@@ -83,9 +73,6 @@ for tid, tile in tiles.items():
         for b in "TRBL":
             borders[b][get_border(t2, b)].add((tid, tr))
 
-#print(borders)
-#exit(0)
-
 # puzzle size
 psize = int(math.sqrt(len(tiles)))
 assert psize * psize == len(tiles)
@@ -122,7 +109,6 @@ def solve(tlist):
                 return sol
     return None
 
-
 sol = None
 for tid in tiles.keys():
     if sol:
@@ -133,9 +119,9 @@ for tid in tiles.keys():
         if sol := solve(found):
             #print(f"SOL: {sol}")
             print(
-                sol[0][0] * 
-                sol[psize-1][0] * 
-                sol[-psize][0] * 
+                sol[0][0] *
+                sol[psize-1][0] *
+                sol[-psize][0] *
                 sol[-1][0]
             )
             break
@@ -159,6 +145,8 @@ for y in range(psize):
         puzzle.append(''.join(r))
 
 #prt(puzzle)
+
+# Here be drag^H^H^H^Hsea monsters
 
 spsize = len(puzzle[0])
 
