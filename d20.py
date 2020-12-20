@@ -77,6 +77,8 @@ for tid, tile in tiles.items():
 psize = int(math.sqrt(len(tiles)))
 assert psize * psize == len(tiles)
 
+#all_tile_variants = list(itertools.product(tiles.keys(), range(8)))
+
 def solve(tlist):
     if len(tlist) == len(tiles):
         return tlist
@@ -84,49 +86,34 @@ def solve(tlist):
     inext = len(tlist)
     x = inext % psize
     y = inext // psize
-    m = None # possible tiles for (x,y)
+    tids_used = set(t[0] for t in tlist)
+    m = set(itertools.product(set(tiles.keys()) - tids_used, range(8)))
     #print(f"x={x}, y={y}")
     if x > 0:
         tid, tr, tile = tlist[-1]
         lborder = get_border(tile, 'R')
-        m = borders['L'][lborder]
-        #print(f"Matches for x (lborder={lborder}): {m}")
+        m &= borders['L'][lborder]
+        #print(f"Matches after x (lborder={lborder}): {m}")
     if y > 0:
         tid, tr, tile = tlist[-psize]
         tborder = get_border(tile, 'B')
-        my = borders['T'][tborder]
-        if m:
-            m = m & my
-        else:
-            m = my
-        #print(f"Matches for y (tborder={tborder}): {m}")
-    tids_used = set(t[0] for t in tlist)
+        m &= borders['T'][tborder]
+        #print(f"Matches after y (tborder={tborder}): {m}")
     for tid, tr in m:
-        if tid not in tids_used:
-            tile = transform(tiles[tid], tr)
-            if sol := solve(tlist + [(tid, tr, tile)]):
-                #print(f"Found: {sol}")
-                return sol
+        tile = transform(tiles[tid], tr)
+        if sol := solve(tlist + [(tid, tr, tile)]):
+            #print(f"Found: {sol}")
+            return sol
     return None
 
-sol = None
-for tid in tiles.keys():
-    if sol:
-        break
-    for tr in range(8):
-        tile = transform(tiles[tid], tr)
-        found = [(tid, tr, tile)]
-        if sol := solve(found):
-            #print(f"SOL: {sol}")
-            print(
-                sol[0][0] *
-                sol[psize-1][0] *
-                sol[-psize][0] *
-                sol[-1][0]
-            )
-            break
-
+sol = solve([])
 assert(sol is not None)
+print(
+    sol[0][0] *
+    sol[psize-1][0] *
+    sol[-psize][0] *
+    sol[-1][0]
+)
 
 # So now to the part 2... Build the bitmap of the puzzle
 
