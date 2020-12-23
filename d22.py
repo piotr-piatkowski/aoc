@@ -34,7 +34,7 @@ def play(players, part=1):
                 return int(not(i))
 
         if part == 2:
-            key = (tuple(players[0]), tuple(players[1])) 
+            key = (tuple(players[0]), tuple(players[1]))
             if key in history:
                 return 0
             history.add(key)
@@ -47,7 +47,7 @@ def play(players, part=1):
             winner = 0 if c[0] > c[1] else 1
 
         players[winner].append(c[winner])
-        players[winner].append(c[int(not(winner))])
+        players[winner].append(c[not(winner)])
 
 
 org_players = players
