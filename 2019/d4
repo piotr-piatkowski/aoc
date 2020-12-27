@@ -1,0 +1,41 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+from collections import defaultdict
+from copy import deepcopy
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d4.txt'
+
+f = open(path, "r")
+rfrom, rto = map(int, f.readline().strip().split('-'))
+
+r = range(rfrom, rto + 1)
+
+for part in (1, 2):
+    c = 0
+    for n in [str(n) for n in r]:
+        ok = False
+        for d in '0123456789':
+            if d * 2 in n and (part == 1 or d * 3 not in n):
+                ok = True
+                break
+        if not ok:
+            continue
+        
+        ld = 0
+        ok = True
+        for d in str(n):
+            if int(d) < ld:
+                ok = False
+                break
+            ld = int(d)
+        if not ok:
+            continue
+
+        c += 1
+
+    print(c)
