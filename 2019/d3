@@ -1,0 +1,66 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+from collections import defaultdict
+from copy import deepcopy
+
+
+def add_cable(arr, cable, check):
+    x = 0
+    y = 0
+    i = 0
+    min1, min2 = None, None
+
+    for move in cable.split(','):
+        dir = move[0]
+        val = int(move[1:])
+        if dir == 'U':
+            dx = 0
+            dy = 1
+        elif dir == 'D':
+            dx = 0
+            dy = -1
+        elif dir == 'L':
+            dx = -1
+            dy = 0
+        elif dir == 'R':
+            dx = 1
+            dy = 0
+        else:
+            raise Exception(f"Dir: {dir}")
+        for _ in range(val):
+            x += dx
+            y += dy
+            i += 1
+            if check:
+                if arr[(x, y)] > 0:
+                    #print(f"Cross at ({x}, {y})")
+                    dist = i + arr[(x, y)]
+                    if min2 is None or dist < min2:
+                        min2 = dist
+                    if min1 is None or abs(x + y) < min1:
+                        min1 = abs(x + y)
+            else:
+                arr[(x, y)] = i
+
+    return min1, min2
+
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input.txt'
+
+arr = defaultdict(int)
+
+f = open(path, "r")
+lines = []
+for line in f:
+    lines.append(line.rstrip())
+
+add_cable(arr, lines[0], False)
+min1, min2 = add_cable(arr, lines[1], True)
+
+print(min1)
+print(min2)
