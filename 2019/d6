@@ -1,0 +1,52 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import inspect
+from collections import defaultdict
+from copy import deepcopy
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d6.txt'
+
+orbits = {}
+
+with open(path, "r") as f:
+    for line in f:
+        l, r = line.rstrip().split(')')
+        orbits[r] = l
+
+#print(orbits)
+
+# Part 1
+
+def cnt(t):
+    if t == 'COM':
+        return 0
+    else:
+        return 1 + cnt(orbits[t])
+
+print(sum([cnt(t) for t in orbits.keys()]))
+
+# Part 2
+
+def com_path(t):
+    path = []
+    while t != 'COM':
+        path.append(t)
+        t = orbits[t]
+    path.append('COM')
+    return path
+
+your_path = com_path('YOU')
+santa_path = com_path('SAN')
+
+while your_path[-1] == santa_path[-1]:
+    your_path.pop()
+    santa_path.pop()
+
+print(len(your_path) + len(santa_path) - 2)
