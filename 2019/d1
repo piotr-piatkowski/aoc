@@ -1,0 +1,38 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+from collections import defaultdict
+from copy import deepcopy
+
+rules = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input.txt'
+
+s = 0
+
+f = open(path, "r")
+for line in f:
+    line = line.rstrip()
+    n = int(line)
+    s += n // 3 - 2
+
+print(s)
+
+s = 0
+
+f = open(path, "r")
+for line in f:
+    line = line.rstrip()
+    n = int(line)
+    while True:
+        n = n // 3 - 2
+        if n >= 0:
+            s += n
+        else:
+            break
+
+print(s)

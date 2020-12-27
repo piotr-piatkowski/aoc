@@ -1,0 +1,121 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import inspect
+from collections import defaultdict
+from copy import deepcopy
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+#print(code)
+
+class BaseInstruction:
+
+    def __init__(self, memory, ip):
+        n = memory[ip]
+        self.opcode = n % 100
+        self.immediate_params = set()
+        for i, pm in enumerate(str(n)[-3::-1]):
+            if pm == '1':
+                self.immediate_params.add(i)
+        self.params = [memory[ip+1+i] for i in range(self.PARAMS_NUM)]
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(params={self.params})"
+
+    def get_param(self, n, memory):
+        return memory[self.params[n]]
+
+    def set_param(self, n, v, memory):
+        memory[self.params[n]] = v
+
+
+class StopInstruction(BaseInstruction):
+    OPCODE = 99
+    PARAMS_NUM = 0
+
+    def execute(self, memory, input, output):
+        raise StopIteration()
+
+
+class BaseMathInstruction(BaseInstruction):
+    PARAMS_NUM = 3
+
+    def calculate(self, a, b):
+        raise NotImplementedError()
+
+    def execute(self, memory, input, output):
+        a = self.get_param(0, memory)
+        b = self.get_param(1, memory)
+        self.set_param(2, self.calculate(a, b), memory)
+
+
+class AddInstruction(BaseMathInstruction):
+    OPCODE = 1
+
+    def calculate(self, a, b):
+        return a + b
+
+
+class MulInstruction(BaseMathInstruction):
+    OPCODE = 2
+
+    def calculate(self, a, b):
+        return a * b
+
+
+def instruction_from_code(memory, ip):
+    n = memory[ip]
+    opcode = n % 100
+
+    for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+        if issubclass(cls, BaseInstruction) and not name.startswith('Base'):
+            if cls.OPCODE == opcode:
+                return cls(memory, ip)
+    raise Exception(f"Instruction not found: {n}")
+
+
+class Computer:
+    def __init__(self, memory):
+        self.memory = deepcopy(memory)
+        self.input = []
+        self.output = []
+
+    def run(self):
+        self.ip = 0
+        while True:
+            try: 
+                ins = instruction_from_code(self.memory, self.ip)
+                #print(f"Executing {ins}")
+                ins.execute(self.memory, self.input, self.output)
+                self.ip += ins.PARAMS_NUM + 1
+            except StopIteration:
+                break
+
+
+comp = Computer(code)
+comp.memory[1] = 12
+comp.memory[2] = 2
+comp.run()
+print(comp.memory[0])
+
+for d1 in range(100):
+    for d2 in range(100):
+        comp = Computer(code)
+        comp.memory[1] = d1
+        comp.memory[2] = d2
+        comp.run()
+        if comp.memory[0] == 19690720:
+            print(d1 * 100 + d2)
+            exit(0)

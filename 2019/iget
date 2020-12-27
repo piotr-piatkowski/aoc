@@ -1,0 +1,18 @@
+#!/bin/sh
+for DAY in $(seq 1 25); do
+    curl "https://adventofcode.com/2019/day/$DAY/input" \
+      -o "input-d${DAY}.txt" \
+      -H 'authority: adventofcode.com' \
+      -H 'cache-control: max-age=0' \
+      -H 'upgrade-insecure-requests: 1' \
+      -H 'user-agent: Mozilla/5.0 (X11; CrOS x86_64 13099.85.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.110 Safari/537.36' \
+      -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
+      -H 'sec-fetch-site: same-origin' \
+      -H 'sec-fetch-mode: navigate' \
+      -H 'sec-fetch-user: ?1' \
+      -H 'sec-fetch-dest: document' \
+      -H 'referer: https://adventofcode.com/2020' \
+      -H 'accept-language: pl,en-US;q=0.9,en;q=0.8' \
+      -H 'cookie: _ga=GA1.2.1905306155.1606293730; session=53616c7465645f5fcf94bea943636963466a79e87673d93fcb39bc477fd5c6e648444ea33d22831d7d314a710a7811cd; _gid=GA1.2.423419157.1607242136' \
+      --compressed
+done
