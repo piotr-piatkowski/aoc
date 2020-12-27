@@ -11,7 +11,7 @@ code = []
 if len(sys.argv) > 1:
     path = sys.argv[1]
 else:
-    path = 'input.txt'
+    path = 'input-d5.txt'
 
 f = open(path, "r")
 src = f.read()
