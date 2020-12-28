@@ -1,0 +1,88 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import time
+from collections import defaultdict
+from copy import deepcopy
+
+from intcomp import Computer
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d11.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+# Part 1
+
+def paint(whites):
+
+    comp = Computer(code)
+    comp.start()
+
+    painted = set()
+
+    x = 0
+    y = 0
+
+    dx = 0
+    dy = 1
+
+    while comp.running:
+        pos = (x, y)
+        if pos in whites:
+            comp.input.put(1)
+        else:
+            comp.input.put(0)
+
+        color = comp.output.get()
+        if color == 1:
+            whites.add(pos)
+        else:
+            whites.discard(pos)
+
+        painted.add(pos)
+
+        dir = comp.output.get()
+        if dir == 0:
+            dx, dy = -dy, dx
+        else:
+            dx, dy = dy, -dx
+
+        x += dx
+        y += dy
+
+    return painted
+
+# Part 1 - start on black, count painted
+whites = set()
+painted = paint(whites)
+
+print(len(painted))
+
+# Part 2 - start on white, and then print results
+whites = set()
+whites.add((0,0))
+
+paint(whites)
+minx = min(xy[0] for xy in whites)
+maxx = max(xy[0] for xy in whites)
+miny = min(xy[1] for xy in whites)
+maxy = max(xy[1] for xy in whites)
+
+for y in range(maxy, miny - 1, -1):
+    for x in range(minx, maxx + 1):
+        if (x,y) in whites:
+            print("#", end='')
+        else:
+            print(' ', end='')
+    print()
+
