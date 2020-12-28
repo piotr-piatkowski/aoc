@@ -1,0 +1,52 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import inspect
+import itertools
+import time
+import queue
+from collections import defaultdict
+from copy import deepcopy
+from threading import Thread
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d8.txt'
+
+f = open(path, "r")
+src = f.read().strip()
+
+WIDTH=25
+HEIGHT=6
+
+layers = []
+lsize = WIDTH*HEIGHT
+while src != '':
+    layers.append(src[:lsize])
+    src = src[lsize:]
+
+# Part 1
+
+min0 = None
+res = None
+for l in layers:
+    zeroes = l.count('0')
+    if min0 is None or zeroes < min0:
+        min0 = zeroes
+        res = l.count('1') * l.count('2')
+
+print(res)
+
+# Part 2
+
+for row in range(HEIGHT):
+    for col in range(WIDTH):
+        for l in layers:
+            if (pix := l[row*WIDTH+col]) != '2':
+                print(('#' if pix == '1' else ' '), end='')
+                break
+    print()
