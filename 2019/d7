@@ -5,6 +5,7 @@ import sys
 import inspect
 import itertools
 import time
+import queue
 from collections import defaultdict
 from copy import deepcopy
 from threading import Thread
@@ -86,9 +87,12 @@ class ReadInstruction(BaseInstruction):
     PARAMS_NUM = 1
 
     def execute(self, comp):
-        while len(comp.input) == 0 and comp.running:
-            time.sleep(0.0001)
-        v = comp.input.pop(0)
+        while comp.running:
+            try:
+                v = comp.input.get(timeout=0.1)
+                break
+            except queue.Empty:
+                pass
         self.set_param(0, v, comp.memory)
 
 
@@ -97,7 +101,7 @@ class WriteInstruction(BaseInstruction):
     PARAMS_NUM = 1
 
     def execute(self, comp):
-        comp.output.append(self.get_param(0, comp.memory))
+        comp.output.put(self.get_param(0, comp.memory))
 
 
 class JumpIfTrueInstruction(BaseInstruction):
@@ -157,8 +161,8 @@ def instruction_from_code(memory, ip):
 class Computer:
     def __init__(self, memory):
         self.memory = deepcopy(memory)
-        self.input = []
-        self.output = []
+        self.input = queue.Queue()
+        self.output = queue.Queue()
         self.running = False
         self.jump_done = False
 
@@ -180,11 +184,6 @@ class Computer:
             except StopIteration:
                 self.running = False
 
-    def pop_output(self):
-        while self.running and len(self.output) == 0:
-            time.sleep(0.0001)
-        return self.output.pop(0)
-
     def start(self):
         self.worker = Thread(target=self.run)
         self.worker.start()
@@ -200,9 +199,10 @@ for settings in itertools.permutations(range(5)):
     sig = 0
     for phase in settings:
         comp = Computer(code)
-        comp.input = [phase, sig]
+        comp.input.put(phase)
+        comp.input.put(sig)
         comp.run()
-        sig = comp.output[0]
+        sig = comp.output.get()
         #print(comp.input, comp.output)
     if max_sig is None or sig > max_sig:
         max_sig = sig
@@ -215,7 +215,7 @@ max_sig = None
 for settings in itertools.permutations(range(5, 10)):
     comps = [Computer(code) for _ in range(5)]
     for i, phase in enumerate(settings):
-        comps[i].input.append(phase)
+        comps[i].input.put(phase)
         comps[i].start()
 
     sig = 0
@@ -223,8 +223,8 @@ for settings in itertools.permutations(range(5, 10)):
     last_sig = None
     while any(c.running for c in comps):
         c = comps[amp]
-        c.input.append(sig)
-        sig = c.pop_output()
+        c.input.put(sig)
+        sig = c.output.get()
         if amp == 4:
             last_sig = sig
         amp = (amp + 1) % 5
