@@ -1,0 +1,101 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import inspect
+import itertools
+import time
+import queue
+import math
+import fractions
+from collections import defaultdict
+from copy import deepcopy
+from threading import Thread
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d10.txt'
+
+rows = []
+with open(path, "r") as f:
+    for l in f:
+        rows.append(l.strip())
+
+width = len(rows[0])
+height = len(rows)
+
+
+# counts blocked asteroids from point x,y
+def count_blocked(x0, y0):
+    #print(f"Counting blocked from ({x0},{y0})")
+    blocked = set()
+    for y in range(height):
+        for x in range(width):
+            if (x != x0 or y != y0) and rows[y][x] == '#':
+                dy = y - y0
+                dx = x - x0
+                gcd = math.gcd(dx, dy)
+                dx //= gcd
+                dy //= gcd
+                i = gcd + 1
+                while True:
+                    nx = x0 + i * dx
+                    ny = y0 + i * dy
+                    if nx < 0 or nx >= width or ny < 0 or ny >= height:
+                        break
+                    if rows[ny][nx] == '#':
+                        #print(f"  ({nx},{ny}) is blocked by ({x},{y})")
+                        blocked.add((nx, ny))
+                    i += 1
+    #print(f"Total {len(blocked)} blocked")
+    return len(blocked)
+
+# Part 1 - find best place for station
+
+min_blocked = None
+for y in range(height):
+    for x in range(width):
+        if rows[y][x] == '#':
+            b = count_blocked(x, y)
+            if min_blocked is None or b < min_blocked:
+                min_blocked = b
+                min_x = x
+                min_y = y
+
+total = sum(r.count('#') for r in rows)
+
+print(total - min_blocked - 1)
+
+# Part 2 
+
+bx, by = min_x, min_y
+
+buckets = defaultdict(list)
+for y in range(height):
+    for x in range(width):
+        if (x != bx or y != by) and rows[y][x] == '#':
+            dy = y - by
+            dx = x - bx
+            gcd = math.gcd(dx, dy)
+            dx //= gcd
+            dy //= gcd
+            buckets[dx,dy].append((x, y))
+
+# Sort buckets by angle, starting from north. For this we have to
+# exchange x and y, and also negate y to get cartesian coordinates
+bsorted = [kv[1] for kv in sorted(buckets.items(), key = lambda kv:
+    (math.atan2(kv[0][0], -kv[0][1]) + 2 * math.pi) % (2 * math.pi))]
+
+for buck in bsorted:
+    # sort all from given direction by distance
+    buck.sort(key = lambda xy: abs(bx - xy[0]) + abs(by - xy[1]))
+
+fire_order = []
+i = 0
+while any(len(b) > 0 for b in bsorted):
+    if len(bsorted[i]) > 0:
+        fire_order.append(bsorted[i].pop(0))
+    i = (i + 1) % len(bsorted)
+
+print(fire_order[199])
