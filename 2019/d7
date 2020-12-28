@@ -1,0 +1,237 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import inspect
+import itertools
+import time
+from collections import defaultdict
+from copy import deepcopy
+from threading import Thread
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d7.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+#print(code)
+
+class BaseInstruction:
+
+    def __init__(self, memory, ip):
+        n = memory[ip]
+        self.opcode = n % 100
+        self.immediate_params = set()
+        for i, pm in enumerate(str(n)[-3::-1]):
+            if pm == '1':
+                self.immediate_params.add(i)
+        self.params = [memory[ip+1+i] for i in range(self.PARAMS_NUM)]
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(params={self.params})"
+
+    def get_param(self, n, memory):
+        if n in self.immediate_params:
+            return self.params[n]
+        else:
+            return memory[self.params[n]]
+
+    def set_param(self, n, v, memory):
+        memory[self.params[n]] = v
+
+
+class StopInstruction(BaseInstruction):
+    OPCODE = 99
+    PARAMS_NUM = 0
+
+    def execute(self, comp):
+        raise StopIteration()
+
+
+class BaseMathInstruction(BaseInstruction):
+    PARAMS_NUM = 3
+
+    def calculate(self, a, b):
+        raise NotImplementedError()
+
+    def execute(self, comp):
+        a = self.get_param(0, comp.memory)
+        b = self.get_param(1, comp.memory)
+        self.set_param(2, self.calculate(a, b), comp.memory)
+
+
+class AddInstruction(BaseMathInstruction):
+    OPCODE = 1
+
+    def calculate(self, a, b):
+        return a + b
+
+
+class MulInstruction(BaseMathInstruction):
+    OPCODE = 2
+
+    def calculate(self, a, b):
+        return a * b
+
+
+class ReadInstruction(BaseInstruction):
+    OPCODE = 3
+    PARAMS_NUM = 1
+
+    def execute(self, comp):
+        while len(comp.input) == 0 and comp.running:
+            time.sleep(0.0001)
+        v = comp.input.pop(0)
+        self.set_param(0, v, comp.memory)
+
+
+class WriteInstruction(BaseInstruction):
+    OPCODE = 4
+    PARAMS_NUM = 1
+
+    def execute(self, comp):
+        comp.output.append(self.get_param(0, comp.memory))
+
+
+class JumpIfTrueInstruction(BaseInstruction):
+    OPCODE = 5
+    PARAMS_NUM = 2
+
+    def execute(self, comp):
+        if self.get_param(0, comp.memory) != 0:
+            comp.jump(self.get_param(1, comp.memory))
+
+
+class JumpIfFalseInstruction(BaseInstruction):
+    OPCODE = 6
+    PARAMS_NUM = 2
+
+    def execute(self, comp):
+        if self.get_param(0, comp.memory) == 0:
+            comp.jump(self.get_param(1, comp.memory))
+
+
+class LessThanInstruction(BaseInstruction):
+    OPCODE = 7
+    PARAMS_NUM = 3
+
+    def execute(self, comp):
+        if self.get_param(0, comp.memory) < self.get_param(1, comp.memory):
+            self.set_param(2, 1, comp.memory)
+        else:
+            self.set_param(2, 0, comp.memory)
+
+
+class EqualsInstruction(BaseInstruction):
+    OPCODE = 8
+    PARAMS_NUM = 3
+
+    def execute(self, comp):
+        if self.get_param(0, comp.memory) == self.get_param(1, comp.memory):
+            self.set_param(2, 1, comp.memory)
+        else:
+            self.set_param(2, 0, comp.memory)
+
+op_to_class = {cls.OPCODE: cls
+    for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    if issubclass(cls, BaseInstruction) and not name.startswith('Base')
+}
+
+def instruction_from_code(memory, ip):
+    n = memory[ip]
+    opcode = n % 100
+                
+    if opcode in op_to_class:
+        return op_to_class[opcode](memory, ip)
+    else:
+        raise Exception(f"Instruction not found: {n}")
+
+
+class Computer:
+    def __init__(self, memory):
+        self.memory = deepcopy(memory)
+        self.input = []
+        self.output = []
+        self.running = False
+        self.jump_done = False
+
+    def jump(self, addr):
+        self.ip = addr
+        self.jump_done = True
+
+    def run(self):
+        self.running = True
+        self.ip = 0
+        while self.running:
+            try:
+                ins = instruction_from_code(self.memory, self.ip)
+                #print(f"ip={self.ip}, executing {ins}")
+                self.jump_done = False
+                ins.execute(self)
+                if not self.jump_done:
+                    self.ip += ins.PARAMS_NUM + 1
+            except StopIteration:
+                self.running = False
+
+    def pop_output(self):
+        while self.running and len(self.output) == 0:
+            time.sleep(0.0001)
+        return self.output.pop(0)
+
+    def start(self):
+        self.worker = Thread(target=self.run)
+        self.worker.start()
+
+    def stop(self):
+        self.running = False
+        self.worker.join()
+
+# Part 1
+
+max_sig = None
+for settings in itertools.permutations(range(5)):
+    sig = 0
+    for phase in settings:
+        comp = Computer(code)
+        comp.input = [phase, sig]
+        comp.run()
+        sig = comp.output[0]
+        #print(comp.input, comp.output)
+    if max_sig is None or sig > max_sig:
+        max_sig = sig
+
+print(max_sig)
+
+# Part 2
+
+max_sig = None
+for settings in itertools.permutations(range(5, 10)):
+    comps = [Computer(code) for _ in range(5)]
+    for i, phase in enumerate(settings):
+        comps[i].input.append(phase)
+        comps[i].start()
+
+    sig = 0
+    amp = 0
+    last_sig = None
+    while any(c.running for c in comps):
+        c = comps[amp]
+        c.input.append(sig)
+        sig = c.pop_output()
+        if amp == 4:
+            last_sig = sig
+        amp = (amp + 1) % 5
+    #print(f"Done, last_sig={last_sig}")
+    
+    if max_sig is None or last_sig > max_sig:
+        max_sig = last_sig
+
+print(max_sig)
+
