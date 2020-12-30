@@ -63,7 +63,7 @@ for i in range(1000):
 print(energy(planets))
 
 # Part 2 - find the shortest cycle. For this - find cycle for each
-# dimension separately
+# dimension separately, then calculate lcm of all cycles.
 
 def planets_to_key(planets, dims):
     l = []
