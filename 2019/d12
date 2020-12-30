@@ -1,0 +1,90 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import numpy
+from copy import deepcopy
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d12.txt'
+
+lines = []
+with open(path, "r") as f:
+    for l in f:
+        lines.append(l.strip())
+
+planets = []
+for l in lines:
+    if m := re.match(r'<x=(.*), y=(.*), z=(.*)>', l):
+        planets.append({
+            'pos': list(map(int, m.groups())),
+            'vel': [0, 0, 0],
+        })
+    else:
+        raise Exception(f"line: {l}")
+
+def step(planets, dims):
+    for p1, p2 in itertools.combinations(planets, 2):
+        for i in dims:
+            if p1['pos'][i] > p2['pos'][i]:
+                p1['vel'][i] -= 1
+                p2['vel'][i] += 1
+            elif p1['pos'][i] < p2['pos'][i]:
+                p1['vel'][i] += 1
+                p2['vel'][i] -= 1
+
+    for p in planets:
+        for i in dims:
+            p['pos'][i] += p['vel'][i]
+
+
+def energy(planets):
+    en = 0
+    for p in planets:
+        enp = 0
+        env = 0
+        for i in range(3):
+            enp += abs(p['pos'][i])
+            env += abs(p['vel'][i])
+        en += enp * env
+    return en
+
+# Part 1 - 1000 steps with 3d coords
+
+orig_planets = deepcopy(planets)
+
+for i in range(1000):
+    #print(planets)
+    step(planets, range(3))
+
+print(energy(planets))
+
+# Part 2 - find the shortest cycle. For this - find cycle for each
+# dimension separately
+
+def planets_to_key(planets, dims):
+    l = []
+    for p in planets:
+        for i in dims:
+            l.append(p['pos'][i])
+            l.append(p['vel'][i])
+    return tuple(l)
+
+cycles = []
+for d in range(3):
+    dims = range(d, d+1)
+    planets = deepcopy(orig_planets)
+    known = set()
+    n = 0
+    while (k := planets_to_key(planets, dims)) not in known:
+        known.add(k)
+        step(planets, dims)
+        n += 1
+    #print(f"Cycle for dim {d}: {n}")
+    cycles.append(n)
+
+print(numpy.lcm.reduce(cycles))
+
