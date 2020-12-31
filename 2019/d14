@@ -1,0 +1,81 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import numpy
+from copy import deepcopy
+from collections import defaultdict
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d14.txt'
+
+lines = []
+with open(path, "r") as f:
+    for l in f:
+        lines.append(l.strip())
+
+reactions = {}
+for l in lines:
+    if m := re.match(r'(.*) => (\d+) (\w+)', l):
+        amount = int(m.group(2))
+        target = m.group(3)
+        ingredients = []
+        for ing in m.group(1).split(', '):
+            am, what = ing.split()
+            ingredients.append({'amount': int(am), 'name': what})
+        if target in reactions:
+            raise Exception(f"Duplicate recipe for {target}")
+        reactions[target] = {'amount': amount, 'ingredients': ingredients}
+    else:
+        raise Exception(f"line: {l}")
+
+#print(reactions)
+
+def ore_for_fuel(fuel):
+    needed = defaultdict(int)
+    extra = defaultdict(int)
+    needed['FUEL'] = fuel
+    ore_needed = 0
+    while len(needed) > 0:
+        #print(needed, extra, ore_needed)
+        what = next(iter(reversed(needed.keys())))
+        amount_needed = needed.pop(what)
+        r = reactions[what]
+        n = (amount_needed - extra[what]) // r['amount']
+        while n * r['amount'] < amount_needed - extra[what]:
+            n += 1
+        extra[what] += n * r['amount'] - amount_needed
+        for ing in r['ingredients']:
+            name = ing['name']
+            if name == 'ORE':
+                ore_needed += ing['amount'] * n
+            else:
+                needed[name] += ing['amount'] * n
+
+    return ore_needed
+
+# Part 1
+
+print(ore_for_fuel(1))
+
+# Part 2 - binary search for less-than-trillion
+
+fuel = 1
+target = 1_000_000_000_000
+while ore_for_fuel(fuel) < target:
+    fuel = fuel * 2
+
+upper = fuel
+lower = fuel // 2
+
+while upper - lower > 1:
+    mid = (upper + lower) // 2
+    if ore_for_fuel(mid) > target:
+        upper = mid
+    else:
+        lower = mid
+
+print(lower)
