@@ -1,0 +1,103 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import time
+from collections import defaultdict
+from copy import deepcopy
+
+from intcomp import Computer
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d13.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+# Part 1
+
+comp = Computer(code)
+comp.run()
+
+blocks = set()
+
+while not comp.output.empty():
+    x = comp.output.get()
+    y = comp.output.get()
+    id= comp.output.get()
+    if id == 2:
+        blocks.add((x, y))
+
+print(len(blocks))
+
+# Part 2
+
+TEXTURES = {
+    0: ' ',
+    1: '#',
+    2: '+',
+    3: '-',
+    4: 'o',
+}
+
+screen = defaultdict(lambda: ' ')
+score = 0
+ball_x = None
+paddle_x = None
+
+def draw(comp, pr=True):
+    global screen, score, paddle_x, ball_x
+
+    while not comp.output.empty():
+        x  = comp.output.get()
+        y  = comp.output.get()
+        id = comp.output.get()
+        if id == 3:
+            paddle_x = x
+        if id == 4:
+            ball_x = x
+        if x == -1 and y == 0:
+            score = id
+        else:
+            screen[x, y] = TEXTURES[id]
+
+    if pr:
+        print(f"SCORE: {score}")
+        for y in range(24):
+            for x in range(50):
+                print(screen[x,y], end='')
+            print()
+
+
+code[0] = 2
+comp = Computer(code)
+
+first = True
+
+animate = False
+
+while True:
+    if not comp.run(False):
+        break
+    draw(comp, animate)
+    if first:
+        first = False
+        comp.input.put(0)
+        continue
+    if paddle_x > ball_x:
+        comp.input.put(-1)
+    elif paddle_x < ball_x:
+        comp.input.put(1)
+    else:
+        comp.input.put(0)
+    if animate:
+        time.sleep(0.1)
+
+print(score)

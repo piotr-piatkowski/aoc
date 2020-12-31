@@ -82,12 +82,7 @@ class ReadInstruction(BaseInstruction):
     PARAMS_NUM = 1
 
     def execute(self):
-        while self.comp.running:
-            try:
-                v = self.comp.input.get(timeout=0.1)
-                break
-            except queue.Empty:
-                pass
+        v = self.comp.input.get(block=self.comp.wait_for_input)
         self.set_param(0, v)
 
 
@@ -164,6 +159,8 @@ class Computer:
         self.rbo = 0
         self.running = False
         self.jump_done = False
+        self.wait_for_input = True
+        self.ip = 0
 
     def _instruction_from_ip(self):
         opcode = self.memory[self.ip] % 100
@@ -177,9 +174,9 @@ class Computer:
         self.ip = addr
         self.jump_done = True
 
-    def run(self):
+    def run(self, wait_for_input=True):
         self.running = True
-        self.ip = 0
+        self.wait_for_input = wait_for_input
         while self.running:
             try:
                 ins = self._instruction_from_ip()
@@ -188,8 +185,11 @@ class Computer:
                 ins.execute()
                 if not self.jump_done:
                     self.ip += ins.PARAMS_NUM + 1
+            except queue.Empty:
+                return True
             except StopIteration:
                 self.running = False
+                return False
 
     def start(self):
         self.worker = Thread(target=self.run)
