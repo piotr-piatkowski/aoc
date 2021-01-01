@@ -1,0 +1,157 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import time
+from collections import defaultdict
+from copy import deepcopy
+
+from intcomp import Computer
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d15.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+def back_dir(d):
+    return {1: 2, 2: 1, 3: 4, 4: 3}[d]
+
+def move(d, x, y):
+    if d == 1:
+        return x, y + 1
+    elif d == 2:
+        return x, y - 1
+    elif d == 3:
+        return x - 1, y
+    elif d == 4:
+        return x + 1, y
+    else:
+        raise Exception(f"dir={d}")
+
+bx = 0
+by = 0
+
+ox = None
+oy = None
+
+walls = set()
+empty = set([(0, 0)])
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def print_map(force=False):
+    if not debug and not force:
+        return
+
+    xmin, xmax = bx, bx
+    ymin, ymax = by, by
+    for x, y in walls | empty:
+        if x < xmin:
+            xmin = x
+        if y < ymin:
+            ymin = y
+        if x > xmax:
+            xmax = x
+        if y > ymax:
+            ymax = y
+
+    for y in range(ymax, ymin - 1, -1):
+        for x in range(xmin, xmax + 1):
+            if (x, y) == (bx, by):
+                print("D", end='')
+            elif (x, y) == (ox, oy):
+                print("*", end='')
+            elif (x, y) == (0, 0):
+                print('0', end='')
+            elif (x, y) in walls:
+                print("█", end='')
+            elif (x, y) in empty:
+                print(".", end='')
+            else:
+                print(" ", end='')
+        print()
+
+def check_dir(d, comp):
+    global path, bx, by, ox, oy
+    dbg(f"Checking dir {d} from ({bx}, {by})")
+    new_pos = move(d, bx, by)
+    if new_pos in walls:
+        dbg(f"Known wall")
+        return
+    elif new_pos in empty:
+        dbg(f"Known nothing")
+        return
+    dbg(f"Trying to move into {new_pos}...")
+    comp.input.put(d)
+    comp.run(False)
+    r = comp.output.get()
+    if r == 0:
+        walls.add(new_pos)
+        dbg(f"New wall")
+    elif r == 1 or r == 2:
+        bx, by = new_pos
+        dbg(f"Moved to {new_pos}")
+        if r == 2:
+            ox, oy = bx, by
+            dbg(f"Found oxygen system at {new_pos}, going on")
+        empty.add(new_pos)
+        print_map()
+        for d2 in range(1, 5):
+            if d2 != back_dir(d):
+                check_dir(d2, comp)
+        dbg(f"Going back")
+        comp.input.put(back_dir(d))
+        comp.run(False)
+        r = comp.output.get()
+        assert r == 1
+        bx, by = move(back_dir(d), bx, by)
+    else:
+        raise Exception(f"r={r}")
+    print_map()
+
+# Explore whole area, finding oxygen system but then still exploring
+# to map everything.
+
+comp = Computer(code)
+for d in range(1, 5):
+    bx, by = 0, 0
+    check_dir(d, comp)
+
+# Do things at once. First - find the way from the oxygen to the origin,
+# it's len is the answer to the first part.
+#
+# While traveling, also find the longest existing path from the oxygen to
+# any empty place in the area - this is answer to the second part.
+
+found_paths = []
+longest_path = 0
+def find_the_way(target, pos, cur_path):
+    global longest_path
+    if len(cur_path) > longest_path:
+        longest_path = len(cur_path)
+    if pos == target:
+        found_paths.append(cur_path)
+    else:
+        for d in range(1, 5):
+            if len(cur_path) > 0 and cur_path[-1] == back_dir(d):
+                continue
+            new_pos = move(d, *pos)
+            if new_pos in empty:
+                find_the_way(target, new_pos, cur_path + [d])
+
+find_the_way((0, 0), (ox, oy), [])
+# There's just one path (pity)
+print(len(found_paths[0]))
+print(longest_path)
