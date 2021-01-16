@@ -1,0 +1,75 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+#import numpy as np
+from copy import deepcopy
+from collections import defaultdict
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d16.txt'
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+lines = []
+with open(path, "r") as f:
+    for l in f:
+        lines.append(l.strip())
+
+inp = list(lines[0])
+dbg(inp)
+
+def transform2(inp):
+    sums = []
+    s = 0
+    for n in inp:
+        s += n
+        sums.append(s)
+
+    def get_sum(off, length):
+        s = sums[min(off+length-1, len(inp) - 1)]
+        if off > 0:
+            s -= sums[off-1]
+        return s
+
+    r = []
+    for i in range(len(inp)):
+        pos = i
+        minus = False
+        s = 0
+        while pos < len(inp):
+            if minus:
+                s -= get_sum(pos, i + 1)
+            else:
+                s += get_sum(pos, i + 1)
+            minus = not minus
+            pos += (i + 1) * 2
+        r.append(abs(s) % 10)
+    return r
+
+# Part 1
+
+a = [int(s) for s in inp]
+for i in range(100):
+    a = transform2(a)
+    #dbg(f"i={i}, a={a}")
+
+print("".join(map(str, a[:8])))
+
+# Part 2
+
+offset = int(lines[0][:7])
+#dbg(f"offset={offset}")
+a = [int(s) for s in inp] * 10000
+for i in range(100):
+    dbg("i={}".format(i))
+    a = transform2(a)
+
+print("".join(map(str, a[offset:offset+8])))
