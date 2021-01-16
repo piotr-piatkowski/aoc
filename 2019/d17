@@ -1,0 +1,157 @@
+#!/usr/bin/python3.8
+
+import re
+import sys
+import itertools
+import time
+from collections import defaultdict
+from copy import deepcopy, copy
+
+from intcomp import Computer
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+code = []
+
+if len(sys.argv) > 1:
+    path = sys.argv[1]
+else:
+    path = 'input-d17.txt'
+
+f = open(path, "r")
+src = f.read()
+src.replace('\n', '')
+code = [int(n) for n in src.split(',')]
+
+comp = Computer(code)
+comp.run()
+
+screen = []
+while not comp.output.empty():
+    screen.append(chr(comp.output.get()))
+screen = ''.join(screen)
+dbg(screen)
+
+rows = [r for r in screen.split('\n') if r != '']
+
+width = len(rows[0])
+height = len(rows)
+
+# Part 1 - look for crossings
+align = 0
+for y in range(1, height-1):
+    for x in range(1, width-1):
+        if (rows[y][x] == '#' and rows[y-1][x] == '#' and rows[y+1][x]
+                and rows[y][x-1] == '#' and rows[y][x+1] == '#'):
+            align += x * y
+
+print(align)
+
+# Part 2 - travel the path
+
+# Find the way
+
+for y in range(0, height):
+    for x in range(0, width):
+        if rows[y][x] in '^v<>':
+            bpos = rows[y][x]
+            break # keep x and y
+
+if bpos == '^':
+    dx = 0
+    dy = -1
+elif bpos == '<':
+    dx = -1
+    dy = 0
+elif bpos == '>':
+    dx = 1
+    dy = 0
+elif bpos == 'v':
+    dx = 0
+    dy = 1
+else:
+    raise Exception(f"bpos: {bpos}")
+
+def tile_at(x, y):
+    if x < 0 or x >= width or y < 0 or y >= height:
+        return ' '
+    return rows[y][x]
+
+path = []
+f = 0 # forward
+while True:
+    #dbg(f"1 x={x}, y={y}, dx={dx}, dy={dy}")
+    f = 0
+    while tile_at(x+dx, y+dy) == '#':
+        x += dx
+        y += dy
+        #dbg(f"2 x={x}, y={y}, dx={dx}, dy={dy}")
+        f += 1
+    if f > 0:
+        path.append(f)
+    # Left
+    if tile_at(x+dy, y-dx) == '#':
+        path.append('L')
+        dx, dy = dy, -dx
+    # Right
+    elif tile_at(x-dy, y+dx) == '#':
+        path.append('R')
+        dx, dy = -dy, dx
+    # Stop
+    else:
+        break
+
+dbg(path)
+
+def list_to_string(l):
+    s = ','.join(map(str, l))
+    s = s.replace('F', '1')
+    s = re.sub(r'1((?:,1)+)', lambda m: str(len(m.group(1))//2+1), s)
+    return s
+
+def find_funcs(path, path_done, funcs):
+    if len(path) == 0:
+        return path_done, funcs
+    # Try to put one of A/B/C as next func
+    dbg(''.join(map(str,path)))
+    for k in 'ABC':
+        if k in funcs:
+            if funcs[k] is None:
+                dbg(f'  {k}: None')
+            else:
+                dbg(f'  {k}: {"".join(map(str,funcs[k]))}')
+    for k, v in funcs.items():
+        # If it's not defined (yet) then try with different length up to 20
+        if v is None:
+            l = 1
+            while l <= len(path) and len(list_to_string(path[:l])) <= 20:
+                new_funcs = copy(funcs)
+                new_funcs[k] = path[:l]
+                if r := find_funcs(path[l:], path_done + [k], new_funcs):
+                    return r
+                l += 1
+        else:
+            l = len(v)
+            if path[:l] == v:
+                if r := find_funcs(path[l:], path_done + [k], funcs):
+                    return r
+    return None
+
+path, funcs = find_funcs(path, [], dict(A=None, B=None, C=None))
+
+code[0] = 2
+comp = Computer(code)
+
+comp.put_ascii_input(','.join(path))
+for f in 'ABC':
+    comp.put_ascii_input(','.join(map(str,funcs[f])))
+comp.put_ascii_input("n")
+
+comp.run(False)
+while not comp.output.empty():
+    n = comp.output.get()
+print(n)

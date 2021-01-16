@@ -191,6 +191,18 @@ class Computer:
                 self.running = False
                 return False
 
+    def get_ascii_output(self):
+        chars = []
+        while not self.output.empty():
+            chars.append(chr(self.output.get()))
+        return ''.join(chars)
+
+    def put_ascii_input(self, inp):
+        for ch in inp:
+            self.input.put(ord(ch))
+        if inp[-1] != '\n':
+            self.input.put(ord('\n'))
+
     def start(self):
         self.worker = Thread(target=self.run)
         self.worker.start()
