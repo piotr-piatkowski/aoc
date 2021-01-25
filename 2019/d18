@@ -1,0 +1,200 @@
+#!/usr/bin/python3.8
+
+import os
+import sys
+import re
+import itertools
+import time
+import argparse
+from pprint import pprint, pformat
+from collections import defaultdict
+from copy import deepcopy, copy
+
+from intcomp import Computer
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+class Maze:
+    def __init__(self):
+        self.keys = {}
+        self.doors = {}
+        self.px = None
+        self.py = None
+        self.rows = []
+        self.copy = []
+
+    def read(self, f):
+        for y, l in enumerate(f):
+            row = l.strip()
+            for x, ch in enumerate(row):
+                if ch == '@':
+                    self.keys[ch] = (x,y) # kinda key
+                    self.px = x
+                    self.py = y
+                elif ch.isalpha() and ch.islower():
+                    self.keys[ch] = (x,y)
+                elif ch.isalpha() and ch.isupper():
+                    self.doors[ch] = (x,y)
+            self.rows.append(list(row))
+        dbg(f"keys={self.keys}, doors={self.doors}")
+
+    def print(self):
+        for y, row in enumerate(self.rows):
+            print(''.join(row))
+
+    def back_dir(self, d):
+        return [0, 1, 2, 3][(d+2)%4]
+
+    def move(self, x, y, d):
+        if d == 0:
+            return x + 1, y
+        elif d == 1:
+            return x, y + 1
+        elif d == 2:
+            return x - 1, y
+        elif d == 3:
+            return x, y - 1
+        else:
+            raise Exception(f"dir={d}")
+
+    def can_go_at(self, x, y):
+        ch = self.rows[y][x]
+        return ch in '.@'
+
+    def key_at(self, x, y):
+        ch = self.rows[y][x]
+        if ch.isalpha() and ch.islower():
+            return ch
+        return None
+
+    def door_at(self, x, y):
+        ch = self.rows[y][x]
+        if ch.isalpha() and ch.isupper():
+            return ch
+        return None
+
+    def _find_key_dists_rec(self, k_from, x, y, path, keys_on_path, key_dists):
+        k = self.key_at(x, y)
+        if k and k != k_from:
+            dist = len(path) - 1
+            if keys_on_path in key_dists[k]:
+                cur_dist = key_dists[k]
+                # It seems there're no paths with different door sets between
+                # any two points, make sure so we can simplify things later.
+                if cur_dist[1] != keys_on_path:
+                    raise Exception(f"Multiple paths for {k}: {key_dists[k]}")
+                if cur_dist[0] > dist:
+                    key_dists[k] = (dist, keys_on_path)
+            else:
+                key_dists[k] = (dist, keys_on_path)
+
+        door = self.door_at(x, y)
+        if door:
+            new_keys_on_path = keys_on_path | {door.lower()}
+        else:
+            new_keys_on_path = keys_on_path
+
+        for d in range(4):
+            nx, ny = self.move(x, y, d)
+            p = (nx, ny)
+            if p not in path and self.rows[y][x] != '#':
+                self._find_key_dists_rec(k_from, nx, ny, path | {p},
+                        new_keys_on_path, key_dists)
+
+    def find_key_dists_from(self, k):
+        key_dists = defaultdict(dict)
+        x, y = self.keys[k]
+        self._find_key_dists_rec(k, x, y, {(x,y)}, frozenset(), key_dists)
+        return key_dists
+
+    def _collect_keys_rec(self, x, y, total_path_len, keys):
+        if len(keys) == len(self.keys.keys()):
+            return [total_path_len] # found all keys
+
+        possible_paths = []
+        for k, pdict in self.paths[x,y].items():
+            dbg(f"k={k}, pdict={pformat(pdict)}")
+            # There's just one key and one value
+            keys_required, dist = list(pdict.items())[0]
+            if k not in keys and keys_required <= keys:
+                possible_paths.append((k, dist))
+        dbg(f"Possible paths from ({x},{y}): {pformat(possible_paths)}")
+
+        path_lens = []
+        for k, kdist in possible_paths:
+            dbg(f"Trying with next key {k}")
+            kpos = self.keys[k]
+            path_lens += self._collect_keys_rec(*kpos, total_path_len + kdist,
+                    keys | {k})
+        return path_lens
+
+    def collect_keys(self):
+        # First, calculate possible paths between all possible pairs of
+        # keys, including start point
+        self.paths = {}
+        for k in self.keys.keys():
+            dbg(f"Finding shortest paths from {k} to other keys")
+            self.paths[k] = self.find_key_dists_from(k)
+            dbg(f"Paths: {self.paths[k]}")
+
+        # This is list of solutions:
+        opt_paths = defaultdict(dict)
+
+        # Put all paths of length 2
+        start_paths = self.paths['@']
+        dbg(f'start_paths={start_paths}')
+        for k in self.keys.keys():
+            if k != '@' and k in start_paths and len(start_paths[k][1]) == 0:
+                opt_paths[2][k,frozenset(['@', k])] = start_paths[k][0]
+
+        dbg(f"Before loop opt_paths={opt_paths}")
+
+        # Now the actual TSP problem
+        for path_len in range(3, len(self.keys)+1):
+            # Find optimal length to each of keys from starting point
+            dbg(f"Finding opt_paths of length {path_len}")
+            opt_paths[path_len] = {}
+            for (last_k, path_keys), opt_len in opt_paths[path_len-1].items():
+                for next_k in self.keys:
+                    if next_k not in path_keys:
+                        next_path = self.paths[last_k][next_k]
+                        if next_path[1] <= path_keys:
+                            new_path_keys = path_keys | frozenset(next_k)
+                            new_len = opt_len + next_path[0]
+                            pkey = (next_k, new_path_keys)
+                            if (pkey not in opt_paths[path_len] or
+                                    opt_paths[path_len][pkey] > new_len):
+                                opt_paths[path_len][pkey] = new_len
+            dbg(f"Best paths of len {path_len}: {opt_paths[path_len]}")
+
+        return opt_paths[len(self.keys)]
+
+def run(args):
+    maze = Maze()
+    with open(args.path, "r") as f:
+        maze.read(f)
+
+    maze.print()
+    #pprint(maze.find_key_dists_from(maze.px, maze.py))
+    paths = maze.collect_keys()
+    print(min(paths.values()))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
