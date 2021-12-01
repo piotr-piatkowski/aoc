@@ -1,0 +1,65 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+    last = None
+    c = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.rstrip()
+        n = int(line)
+        if last is not None and n > last:
+            c += 1
+        last = n
+
+    print(c)
+
+    last = None
+    last3 = []
+    c = 0
+    s = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.rstrip()
+        n = int(line)
+        last3.append(n)
+        last3 = last3[-3:]
+        dbg(last3)
+        if len(last3) < 3:
+            continue
+        if last is not None and sum(last3) > last:
+            dbg(f"{sum(last3)=} {last=}")
+            c += 1
+        last = sum(last3)
+
+    print(c)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
