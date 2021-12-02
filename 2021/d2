@@ -1,0 +1,67 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    d = 0
+    p = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.rstrip()
+        dir, v = line.split()
+        if dir == 'forward':
+            p += int(v)
+        elif dir == 'down':
+            d += int(v)
+        else:
+            d -= int(v)
+
+    print(d*p)
+
+    d = 0
+    p = 0
+    a = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.rstrip()
+        dir, v = line.split()
+        if dir == 'forward':
+            p += int(v)
+            d += int(v) * a
+        elif dir == 'down':
+            a += int(v)
+        else:
+            a -= int(v)
+
+    print(d*p)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
