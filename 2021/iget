@@ -1,18 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 DAY=$(date +%-d)
 echo "DAY=$DAY"
+source .env
 curl "https://adventofcode.com/2021/day/$DAY/input" \
   -o "input-d${DAY}.txt" \
   -H 'authority: adventofcode.com' \
   -H 'cache-control: max-age=0' \
-  -H 'upgrade-insecure-requests: 1' \
-  -H 'user-agent: Mozilla/5.0 (X11; CrOS x86_64 13099.85.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.110 Safari/537.36' \
-  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9' \
-  -H 'sec-fetch-site: same-origin' \
-  -H 'sec-fetch-mode: navigate' \
-  -H 'sec-fetch-user: ?1' \
-  -H 'sec-fetch-dest: document' \
-  -H 'referer: https://adventofcode.com/2020' \
-  -H 'accept-language: pl,en-US;q=0.9,en;q=0.8' \
-  -H 'cookie: _ga=GA1.2.1284746497.1637692889; session=53616c7465645f5f795323fce9d5ee84c3585f20da20e977a4ef8ccf1f428fa522d68ce30bc2e703f7561478e44c12ec; _gid=GA1.2.622970373.1638334134; _gat=1' \
+  -H "cookie: ${COOKIE}" \
   --compressed
