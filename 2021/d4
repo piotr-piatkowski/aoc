@@ -1,0 +1,93 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def find_winner(boards, draws, first):
+    win_count = 0
+    for n in draws:
+        for b in boards:
+            b['nums'].discard(n)
+            for what in ('cols', 'rows'):
+                for s in b[what]:
+                    s.discard(n)
+                    if len(s) == 0:
+                        if first:
+                            return b, n
+                        else:
+                            if not b['won']:
+                                b['won'] = True
+                                win_count += 1
+                                if win_count == len(boards):
+                                    return b, n
+
+    return None, None
+
+def run(args):
+
+    draws = []
+    boards = []
+    cur_b = None
+    f = open(args.path, "r")
+    for i, line in enumerate(f):
+        line = line.rstrip()
+        if i == 0:
+            draws = [int(n) for n in line.split(',')]
+        elif line == '':
+            cur_b = []
+            boards.append(cur_b)
+        else:
+            cur_b.append([int(n) for n in line.split()])
+
+    boards2 = []
+    for b in boards:
+        all_nums = set()
+        rows = []
+        cols = [set() for i in range(5)]
+        for r in b:
+            rows.append(set(r))
+            for i, n in enumerate(r):
+                dbg(f"{i=} {n=}")
+                cols[i].add(n)
+                all_nums.add(n)
+        boards2.append({'rows': rows, 'cols': cols,
+                        'nums': all_nums, 'won': False})
+    boards = boards2
+
+    dbg(f"{boards=} {draws=}")
+
+    win, hit = find_winner(boards, draws, True)
+    dbg(f'{win=} {hit=}')
+
+    print(sum(win['nums'])*hit)
+
+    win, hit = find_winner(boards, draws, False)
+    dbg(f'{win=} {hit=}')
+
+    print(sum(win['nums'])*hit)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
