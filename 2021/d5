@@ -38,7 +38,7 @@ def run(args):
                 dy = 1
 
             assert(dx != 0 or dy != 0)
-            dbg(f"{x1=} {x2=} {y1=} {y2=} {dx=} {dy=}")
+            dbg(f"{x1=} {y1=} {x2=} {y2=} {dx=} {dy=}")
 
             x = x1
             y = y1
