@@ -1,0 +1,83 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    field1 = defaultdict(int)
+    field2 = defaultdict(int)
+    f = open(args.path, "r")
+    for i, line in enumerate(f):
+        line = line.rstrip()
+        if m := re.match(r'(\d+),(\d+) -> (\d+),(\d+)', line):
+            x1, y1, x2, y2 = [int(n) for n in m.groups()]
+
+            if x1 == x2:
+                dx = 0
+            elif x1 > x2:
+                dx = -1
+            else:
+                dx = 1
+
+            if y1 == y2:
+                dy = 0
+            elif y1 > y2:
+                dy = -1
+            else:
+                dy = 1
+
+            assert(dx != 0 or dy != 0)
+            dbg(f"{x1=} {x2=} {y1=} {y2=} {dx=} {dy=}")
+
+            x = x1
+            y = y1
+            while x != x2 or y != y2:
+                dbg(f"  {x=} {y=}")
+                if dx == 0 or dy == 0:
+                    field1[x, y] += 1
+                field2[x, y] += 1
+                x += dx
+                y += dy
+            if dx == 0 or dy == 0:
+                field1[x, y] += 1
+            field2[x, y] += 1
+
+        else:
+            raise Exception(f"No match on {line}")
+
+    dbg(field1)
+    dbg(field2)
+
+    for f in (field1, field2):
+        c = 0
+        for n in f.values():
+            if n >= 2:
+                c += 1
+        print(c)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
