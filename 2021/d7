@@ -1,0 +1,61 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def fuel(nums, pos, part):
+    f = 0
+    for n in nums:
+        dist = abs(n - pos)
+        if part == 1:
+            f += dist
+        else:
+            f += dist * (dist + 1) // 2
+    return f
+
+def run(args):
+
+    f = open(args.path, "r")
+    nums = [int (n) for n in f.readline().rstrip().split(',')]
+    dbg(nums)
+
+    for part in (1, 2):
+        best = None
+        bpos = None
+        for pos in range(min(nums), max(nums) + 1):
+            f = fuel(nums, pos, part)
+            if best is None:
+                best = f
+                bpos = pos
+            elif f < best:
+                best = f
+                bpos = pos
+
+        print(best)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
