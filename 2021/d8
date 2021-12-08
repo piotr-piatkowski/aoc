@@ -1,0 +1,99 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+DIGS = {
+    "abcefg": 0,
+    "cf": 1,
+    "acdeg": 2,
+    "acdfg": 3,
+    "bcdf": 4,
+    "abdfg": 5,
+    "abdefg": 6,
+    "acf": 7,
+    "abcdefg": 8,
+    "abcdfg": 9,
+}
+
+def find_tr(digs):
+    for target in permutations('abcdefg', 7):
+        dbg(f"{target=}")
+        correct = True
+        tr = str.maketrans('abcdefg', ''.join(target))
+        for d in digs:
+            dt = ''.join(sorted(d.translate(tr)))
+            if dt not in DIGS:
+                correct = False
+                break
+        if correct:
+            dbg("Found mapping")
+            return tr
+    raise Exception(f"No mapping found for {digs}")
+
+def run(args):
+
+    f = open(args.path, "r")
+    data = []
+    for line in f:
+        line = line.rstrip()
+        codes, digs = line.split('|')
+        codes = codes.strip().split()
+        digs = digs.strip().split()
+        data.append((codes, digs))
+
+    # p1 - base only on the len
+    counts = defaultdict(int)
+    for codes, digs in data:
+        for d in digs:
+            for patt, dd in DIGS.items():
+                if len(d) == len(patt):
+                    counts[dd] += 1
+                    break
+            else:
+                raise Exception(f"No match for {d}")
+
+    s1 = sum([counts[d] for d in (1, 4, 7, 8)])
+    print(s1)
+
+    # p2 - find translation
+    s = 0
+    for codes, digs in data:
+
+        tr = find_tr(codes + digs)
+        ss = 0
+        for d in digs:
+            dd = DIGS[''.join(sorted(d.translate(tr)))]
+            ss = ss * 10 + dd
+            counts[dd] += 1
+        s += ss
+
+    print(s)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
