@@ -1,0 +1,106 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict, Counter
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+DIGS = {
+    "abcefg": 0,
+    "cf": 1,
+    "acdeg": 2,
+    "acdfg": 3,
+    "bcdf": 4,
+    "abdfg": 5,
+    "abdefg": 6,
+    "acf": 7,
+    "abcdefg": 8,
+    "abcdfg": 9,
+}
+
+# Pure magic ;-)
+MAGIC_TABLE = {
+    4: 'e',
+    7: 'g',
+    8: 'a',
+    9: 'b',
+    10: 'd',
+    11: 'c',
+    12: 'f',
+}
+
+def find_tr(all_digs):
+
+    c = Counter()
+    for d in all_digs:
+        if len(d) == 4:
+            c.update(d*4)
+        else:
+            c.update(d)
+
+    tr_map = {k: MAGIC_TABLE[c[k]] for k in 'abcdefg'}
+    return str.maketrans(tr_map)
+
+def run(args):
+
+    f = open(args.path, "r")
+    data = []
+    for line in f:
+        line = line.rstrip()
+        all_digs, num_digs = [p.strip().split() for p in line.split('|')]
+        data.append((all_digs, num_digs))
+
+    # p1 - base only on the len
+    counts = defaultdict(int)
+    for all_digs, num_digs in data:
+        for d in num_digs:
+            for patt, dd in DIGS.items():
+                # This will work correctly only for 1, 4, 7 and 8 - but that's
+                # all we need now.
+                if len(d) == len(patt):
+                    counts[dd] += 1
+                    break
+            else:
+                raise Exception(f"No match for {d}")
+
+    s1 = sum([counts[d] for d in (1, 4, 7, 8)])
+    print(s1)
+
+    # p2 - find translation
+    s = 0
+    for all_digs, num_digs in data:
+
+        tr = find_tr(all_digs)
+        ss = 0
+        for d in num_digs:
+            dd = DIGS[''.join(sorted(d.translate(tr)))]
+            ss = ss * 10 + dd
+        s += ss
+
+    print(s)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
