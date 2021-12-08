@@ -76,7 +76,6 @@ def run(args):
         for d in digs:
             dd = DIGS[''.join(sorted(d.translate(tr)))]
             ss = ss * 10 + dd
-            counts[dd] += 1
         s += ss
 
     print(s)
