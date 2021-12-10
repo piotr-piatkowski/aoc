@@ -30,7 +30,8 @@ def run(args):
     for x, line in enumerate(f):
         lines.append(line.strip())
 
-    PATT = ['()', '{}', '[]', '<>']
+    PATTS = ['()', '{}', '[]', '<>']
+    POINTS = {')': 3, ']': 57, '}': 1197, '>': 25137}
     inc = []
     s = 0
     for l in lines:
@@ -38,48 +39,32 @@ def run(args):
         changes = True
         while changes:
             changes = False
-            for p in PATT:
+            for p in PATTS:
                 if p in l:
                     l = l.replace(p, '')
                     changes = True
         dbg(f"{org=} {l=}")
-        for i, ch in enumerate(l):
-            if ch == ')':
-                s += 3
-                dbg(f"{l=} {ch=}")
-                break
-            if ch == ']':
-                dbg(f"{l=} {ch=}")
-                s += 57
-                break
-            if ch == '}':
-                dbg(f"{l=} {ch=}")
-                s += 1197
-                break
-            if ch == '>':
-                dbg(f"{l=} {ch=}")
-                s += 25137
+        for ch in l:
+            if p := POINTS.get(ch, 0):
+                s += p
                 break
         else:
             inc.append(l)
 
     print(s)
 
-    P = {'(': 1, '[': 2, '{': 3, '<': 4}
+    POINTS2 = {'(': 1, '[': 2, '{': 3, '<': 4}
     res = []
     for l in inc:
         ss = 0
         for ch in reversed(l):
             ss = ss * 5
-            ss += P[ch]
+            ss += POINTS2[ch]
         dbg(f"{ss=}")
         res.append(ss)
 
     res.sort()
     print(res[len(res)//2])
-
-
-
 
 
 def main():
