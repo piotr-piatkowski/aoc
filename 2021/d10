@@ -31,18 +31,14 @@ def run(args):
         lines.append(line.strip())
 
     PATTS = ['()', '{}', '[]', '<>']
+    patt = re.compile('|'.join(re.escape(p) for p in PATTS))
     POINTS = {')': 3, ']': 57, '}': 1197, '>': 25137}
     inc = []
     s = 0
     for l in lines:
         org = l
-        changes = True
-        while changes:
-            changes = False
-            for p in PATTS:
-                if p in l:
-                    l = l.replace(p, '')
-                    changes = True
+        while patt.search(l):
+            l = patt.sub('', l)
         dbg(f"{org=} {l=}")
         for ch in l:
             if p := POINTS.get(ch, 0):
