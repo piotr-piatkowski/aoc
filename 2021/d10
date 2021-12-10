@@ -1,0 +1,99 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+MAP = {
+    '(': ')',
+    '<': '>',
+    '{': '}',
+    '[': ']',
+}
+
+def run(args):
+
+    f = open(args.path, "r")
+    P = {}
+    lines = []
+    for x, line in enumerate(f):
+        lines.append(line.strip())
+
+    PATT = ['()', '{}', '[]', '<>']
+    inc = []
+    s = 0
+    for l in lines:
+        org = l
+        changes = True
+        while changes:
+            changes = False
+            for p in PATT:
+                if p in l:
+                    l = l.replace(p, '')
+                    changes = True
+        dbg(f"{org=} {l=}")
+        for i, ch in enumerate(l):
+            if ch == ')':
+                s += 3
+                dbg(f"{l=} {ch=}")
+                break
+            if ch == ']':
+                dbg(f"{l=} {ch=}")
+                s += 57
+                break
+            if ch == '}':
+                dbg(f"{l=} {ch=}")
+                s += 1197
+                break
+            if ch == '>':
+                dbg(f"{l=} {ch=}")
+                s += 25137
+                break
+        else:
+            inc.append(l)
+
+    print(s)
+
+    P = {'(': 1, '[': 2, '{': 3, '<': 4}
+    res = []
+    for l in inc:
+        ss = 0
+        for ch in reversed(l):
+            ss = ss * 5
+            ss += P[ch]
+        dbg(f"{ss=}")
+        res.append(ss)
+
+    res.sort()
+    print(res[len(res)//2])
+
+
+
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
