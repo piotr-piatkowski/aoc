@@ -1,0 +1,108 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def neighb(P, x, y):
+    n = []
+    for dx in range(-1, 2):
+        for dy in range(-1, 2):
+            if dx != 0 or dy != 0:
+                xx = x+dx
+                yy = y+dy
+                if (xx, yy) in P:
+                    n.append((xx, yy))
+    return n
+
+def pr(P, fl=None):
+    if debug:
+        x0 = min(p[0] for p in P.keys())
+        x1 = max(p[0] for p in P.keys())
+        y0 = min(p[1] for p in P.keys())
+        y1 = max(p[1] for p in P.keys())
+
+        for x in range(x0, x1+1):
+            vals = []
+            for y in range(y0, y1+1):
+                if fl and (x,y) in fl:
+                    v = f'[{P[x,y]:1d}]'
+                else:
+                    v = f' {P[x,y]:1d} '
+                vals.append(v)
+            print(' '.join(vals))
+        print()
+
+def run(args):
+
+    f = open(args.path, "r")
+    P = {}
+    for x, line in enumerate(f):
+        for y, l in enumerate(line.strip()):
+            P[x,y] = int(l)
+
+    fl_count = 0
+    i = 1
+    while True:
+        dbg(f"Step {i}")
+        for p in P.keys():
+            P[p] += 1
+
+        flashed = set()
+        while True:
+            any_fl = False
+            for p in P.keys():
+                if P[p] > 9:
+                    #dbg(f"Flash at {p=}")
+                    if i <= 100:
+                        fl_count += 1
+                    any_fl = True
+                    flashed.add(p)
+                    for pp in neighb(P, *p):
+                        P[pp] += 1
+                    P[p] = 0
+            if not any_fl:
+                break
+
+        for pp in flashed:
+            P[pp] = 0
+
+        pr(P, flashed)
+
+        if len(flashed) == len(P):
+            break
+
+        i += 1
+
+    print(fl_count)
+    print(i)
+
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
