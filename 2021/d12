@@ -1,0 +1,72 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+from collections import defaultdict, Counter
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def ways(P, path, part):
+    c = 0
+    dbg(f"{path=}")
+    for nn in P[path[-1]]:
+        if nn == 'end':
+            dbg(f"FOUND: {path + ['end']}")
+            c += 1
+        elif nn == 'start':
+            continue
+        else:
+            if nn.islower() and nn in path:
+                if part == 1:
+                    continue
+                if part == 2:
+                    smalls = Counter([cc for cc in path
+                                      if cc.islower() and cc != 'start'])
+                    dbl_smalls = [k for k, v in smalls.items() if v > 1]
+                    dbg(f"{smalls=} {dbl_smalls=}")
+                    if dbl_smalls and (nn not in dbl_smalls or smalls[nn] >= 2):
+                        dbg(f"Skipping {nn=}")
+                        continue
+            c += ways(P, path + [nn], part)
+    dbg(f"ret {c=}")
+    return c
+
+def run(args):
+
+    f = open(args.path, "r")
+    P = defaultdict(list)
+    for line in f:
+        f, t = line.strip().split('-')
+        P[f].append(t)
+        P[t].append(f)
+
+    for part in (1, 2):
+        w = ways(P, ['start'], part)
+        print(w)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
