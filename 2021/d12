@@ -16,43 +16,37 @@ def dbg(s):
     if debug:
         print(s)
 
-def ways(P, path, part):
+def count_paths(G, path, extra_visit_allowed, extra_visit_used):
     c = 0
     dbg(f"{path=}")
-    for nn in P[path[-1]]:
+    for nn in G[path[-1]]:
         if nn == 'end':
             dbg(f"FOUND: {path + ['end']}")
             c += 1
         elif nn == 'start':
             continue
         else:
+            extra_needed = False
             if nn.islower() and nn in path:
-                if part == 1:
+                if extra_visit_allowed and not extra_visit_used:
+                    extra_needed = True
+                else:
                     continue
-                if part == 2:
-                    smalls = Counter([cc for cc in path
-                                      if cc.islower() and cc != 'start'])
-                    dbl_smalls = [k for k, v in smalls.items() if v > 1]
-                    dbg(f"{smalls=} {dbl_smalls=}")
-                    if dbl_smalls and (nn not in dbl_smalls or smalls[nn] >= 2):
-                        dbg(f"Skipping {nn=}")
-                        continue
-            c += ways(P, path + [nn], part)
-    dbg(f"ret {c=}")
+            c += count_paths(G, path + [nn], extra_visit_allowed,
+                             extra_visit_used or extra_needed)
     return c
 
 def run(args):
 
     f = open(args.path, "r")
-    P = defaultdict(list)
+    G = defaultdict(list)
     for line in f:
-        f, t = line.strip().split('-')
-        P[f].append(t)
-        P[t].append(f)
+        p1, p2 = line.strip().split('-')
+        G[p1].append(p2)
+        G[p2].append(p1)
 
     for part in (1, 2):
-        w = ways(P, ['start'], part)
-        print(w)
+        print(count_paths(G, ['start'], part == 2, False))
 
 
 def main():
