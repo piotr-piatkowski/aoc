@@ -35,21 +35,10 @@ def pr(P, always=False):
         print()
 
 def fold(P, v, d):
-    P2 = set()
-    for x, y in P:
-        if d == 'x':
-            if x > v:
-                P2.add((2*v-x, y))
-            else:
-                P2.add((x, y))
-        elif d == 'y':
-            if y > v:
-                P2.add((x, 2*v-y))
-            else:
-                P2.add((x, y))
-        else:
-            raise Exception(f"{d=}")
-    return P2
+    if d == 'x':
+        return {(v-abs(x-v), y) for x, y in P}
+    else:
+        return {(x, v-abs(y-v)) for x, y in P}
 
 def run(args):
 
