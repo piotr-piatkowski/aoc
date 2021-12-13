@@ -1,0 +1,99 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def pr(P, always=False):
+    if debug or always:
+        x0 = min(p[0] for p in P)
+        x1 = max(p[0] for p in P)
+        y0 = min(p[1] for p in P)
+        y1 = max(p[1] for p in P)
+
+        for y in range(y0, y1+1):
+            vals = []
+            for x in range(x0, x1+1):
+                if (x,y) in P:
+                    v = '#'
+                else:
+                    v = '.'
+                vals.append(v)
+            print(' '.join(vals))
+        print()
+
+def fold(P, v, d):
+    P2 = set()
+    for x, y in P:
+        if d == 'x':
+            if x > v:
+                P2.add((2*v-x, y))
+            else:
+                P2.add((x, y))
+        elif d == 'y':
+            if y > v:
+                P2.add((x, 2*v-y))
+            else:
+                P2.add((x, y))
+        else:
+            raise Exception(f"{d=}")
+    return P2
+
+def run(args):
+
+    f = open(args.path, "r")
+    P = set()
+    first_fold = True
+    for x, line in enumerate(f):
+        if m := re.match(r'(\d+),(\d+)', line):
+            x = int(m.group(1))
+            y = int(m.group(2))
+            P.add((x,y))
+
+        elif m := re.match(r'fold along (.)=(\d+)', line):
+            dir = m.group(1)
+            v = int(m.group(2))
+
+            if first_fold:
+                pr(P)
+            dbg(f"fold {dir=} {v=}")
+            P = fold(P, v, dir)
+            if first_fold:
+                # p1 answer
+                print(len(P))
+                first_fold = False
+            pr(P)
+
+        elif line.strip() != '':
+            raise Exception(f"Line: {line}")
+
+    pr(P, True)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
