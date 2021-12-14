@@ -16,26 +16,6 @@ def dbg(s):
     if debug:
         print(s)
 
-def count_paths(G, path, extra_visit_allowed, extra_visit_used):
-    c = 0
-    dbg(f"{path=}")
-    for nn in G[path[-1]]:
-        if nn == 'end':
-            dbg(f"FOUND: {path + ['end']}")
-            c += 1
-        elif nn == 'start':
-            continue
-        else:
-            extra_needed = False
-            if nn.islower() and nn in path:
-                if extra_visit_allowed and not extra_visit_used:
-                    extra_needed = True
-                else:
-                    continue
-            c += count_paths(G, path + [nn], extra_visit_allowed,
-                             extra_visit_used or extra_needed)
-    return c
-
 def print_res(pol, cnt):
     lc = Counter()
     for k, v in cnt.items():
@@ -100,9 +80,6 @@ def run(args):
 
         if i+1 in (10, 40):
             print_res(pol, cp)
-
-
-
 
 
 def main():
