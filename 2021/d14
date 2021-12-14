@@ -1,0 +1,122 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+from collections import defaultdict, Counter
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def count_paths(G, path, extra_visit_allowed, extra_visit_used):
+    c = 0
+    dbg(f"{path=}")
+    for nn in G[path[-1]]:
+        if nn == 'end':
+            dbg(f"FOUND: {path + ['end']}")
+            c += 1
+        elif nn == 'start':
+            continue
+        else:
+            extra_needed = False
+            if nn.islower() and nn in path:
+                if extra_visit_allowed and not extra_visit_used:
+                    extra_needed = True
+                else:
+                    continue
+            c += count_paths(G, path + [nn], extra_visit_allowed,
+                             extra_visit_used or extra_needed)
+    return c
+
+def print_res(pol, cnt):
+    lc = Counter()
+    for k, v in cnt.items():
+        lc[k[0]] += v
+        lc[k[1]] += v
+
+    dbg(f"{lc=}")
+
+    lc2 = Counter()
+    for k, v in lc.items():
+        # each letter is contained in 2 pairs, except for the first and last
+        if k == pol[0] or k == pol[-1]:
+            lc2[k] = v // 2 + 1
+        else:
+            lc2[k] = v // 2
+
+    lc = lc2
+    dbg(f"{lc=}")
+
+    cmin = None
+    lmin = None
+    cmax = None
+    lmax = None
+
+    for k, v in lc.items():
+        if cmin is None or v < cmin:
+            cmin = v
+            lmin = k
+        if cmax is None or v > cmax:
+            cmax = v
+            lmax = k
+
+    dbg(f"{cmin=} {lmin=} {cmax=} {lmax=}")
+
+    print(cmax - cmin)
+
+def run(args):
+
+    f = open(args.path, "r")
+    pol = f.readline().strip()
+    empty = f.readline()
+    G = {}
+    for line in f:
+        p1, p2 = line.strip().split(' -> ')
+        G[p1] = p2
+
+    pairs = [pol[i:i+2] for i in range(len(pol)-1)]
+
+    cp = Counter(pairs)
+
+    for i in range(40):
+
+        cp2 = Counter()
+        for p in cp:
+            ins = G[p]
+            p1 = p[0] + ins
+            p2 = ins + p[1]
+            cp2[p1] += cp[p]
+            cp2[p2] += cp[p]
+        cp = cp2
+        dbg(f"{i=}, {cp=}")
+
+        if i+1 in (10, 40):
+            print_res(pol, cp)
+
+
+
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
