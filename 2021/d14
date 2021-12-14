@@ -27,10 +27,11 @@ def print_res(pol, cnt):
     lc2 = Counter()
     for k, v in lc.items():
         # each letter is contained in 2 pairs, except for the first and last
-        if k == pol[0] or k == pol[-1]:
-            lc2[k] = v // 2 + 1
-        else:
-            lc2[k] = v // 2
+        if k == pol[0]:
+            v += 1
+        if k == pol[-1]:
+            v += 1
+        lc2[k] = v // 2
 
     lc = lc2
     dbg(f"{lc=}")
