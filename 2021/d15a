@@ -1,0 +1,163 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+from termcolor import colored
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def pr(P, padding=None, colors={}, color_sets=[], always=False, clear=False):
+    if debug or always:
+        x0 = min(p[0] for p in P)
+        x1 = max(p[0] for p in P)
+        y0 = min(p[1] for p in P)
+        y1 = max(p[1] for p in P)
+
+        if padding is None:
+            if type(P) is set:
+                padding = 2
+            else:
+                padding = max(len(str(v)) for v in P.values()) + 1
+
+        graph = ''
+        for y in range(y0, y1+1):
+            vals = []
+            for x in range(x0, x1+1):
+                if type(P) is set:
+                    if (x,y) in P:
+                        v = '#'
+                    else:
+                        v = '.'
+                else:
+                    v = P.get((x,y), ' ')
+                v = str(v).rjust(padding)
+                if c := colors.get((x,y)):
+                    v = colored(v, c)
+                else:
+                    for cs, col in color_sets:
+                        if (x,y) in cs:
+                            v = colored(v, col)
+                            break
+
+                vals.append(v)
+            graph += ''.join(vals) + '\n'
+
+        if clear:
+            print(chr(27) + "[2J", end='')
+            print(chr(27) + "[H", end='')
+
+        print(graph)
+
+
+def neighb(P, x, y, diag):
+    n = [
+        (x+1, y),
+        (x-1, y),
+        (x, y+1),
+        (x, y-1)
+    ]
+    if diag:
+        n += [
+            (x+1, y+1),
+            (x+1, y-1),
+            (x-1, y+1),
+            (x-1, y-1)
+        ]
+    return [p for p in n if p in P]
+
+def neighb8(P, x, y):
+    return neighb(P, x, y, diag=True)
+
+def neighb4(P, x, y):
+    return neighb(P, x, y, diag=False)
+
+def shortest_path(G, start, end):
+
+    dist_dict = defaultdict(lambda: float('inf'))
+    prev_dict = defaultdict(lambda: None)
+    visited = {start}
+
+    Q = [(0, start, None)]
+
+    while Q and end not in visited:
+        dist, pos, prev = heapq.heappop(Q)
+        for p in neighb4(G, *pos):
+            if p not in visited:
+                best_dist = dist_dict[p]
+                risk = G[p]
+                if dist + risk < best_dist:
+                    dist_dict[p] = dist + risk
+                    prev_dict[p] = pos
+                    heapq.heappush(Q, (dist_dict[p], p, pos))
+            visited.add(p)
+
+        if debug:
+            p = pos
+            path = set()
+            while p != start:
+                path.add(p)
+                p = prev_dict[p]
+
+            color_sets=[
+                ({start}, 'red'),
+                ({end}, 'green'),
+                (path, 'yellow'),
+                (visited, 'grey')
+            ]
+            pr(G, clear=True, color_sets=color_sets)
+            print(f"current path len: {dist}")
+
+    return dist_dict[end]
+
+def run(args):
+
+    f = open(args.path, "r")
+    G = {}
+    for x, line in enumerate(f):
+        for y, r in enumerate(line.strip()):
+            G[x,y] = int(r)
+
+    xsize = max(k[0] for k in G.keys()) + 1
+    ysize = max(k[1] for k in G.keys()) + 1
+
+    print(shortest_path(G, (0,0), (xsize-1, ysize-1)))
+
+    for x in range(xsize):
+        for y in range(ysize):
+            r = G[x,y]
+            for i in range(5):
+                for j in range(5):
+                    G[x+i*xsize, y+j*ysize] = ((r-1)+i+j) % 9 + 1
+
+    if debug:
+        pr(G, clear=True)
+        input("PRESS ENTER TO START")
+    print(shortest_path(G, (0,0), (xsize*5-1, ysize*5-1)))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
