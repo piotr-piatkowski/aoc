@@ -121,15 +121,13 @@ def shortest_path(G, start, end):
 
     return dist_dict[end]
 
-def hit(G, vx, vy):
+def hit(vx, vy, xmin, xmax, ymin, ymax):
     x = 0
     y = 0
 
     topy = 0
-    while x < 310 and y > -77:
-        if vx == 0 and (x > 309 or x < 287):
-            return None
-        if (x,y) in G and G[x,y] == 'T':
+    while x <= xmax  and y >= ymin:
+        if xmin <= x <= xmax and ymin <= y <= ymax:
             return topy
         x += vx
         y += vy
@@ -144,17 +142,25 @@ def hit(G, vx, vy):
 def run(args):
 
     f = open(args.path, "r")
-    G = {}
+    line = f.readline().strip()
+    m = re.match(r'target area: x=(-?\d+)\.\.(-?\d+), y=(-?\d+)\.\.(-?\d+)', line)
+    xmin, xmax, ymin, ymax = (int(v) for v in m.groups())
 
-    for x in range(287, 309+1):
-        for y in range(-76, -48+1):
-            G[x,y] = 'T'
+    dbg(f"{xmin=} {xmax=} {ymin=} {ymax=}")
+
+    assert xmax > xmin
+    assert ymax > ymin
+    assert xmin > 0
+    assert ymin < 0 and ymax < 0
+
+    maxvx = xmax
+    maxvy = abs(ymin)
 
     best = 0
     cnt = 0
-    for vx in range(1, 1000):
-        for vy in range(-1001, 1000):
-            if (y := hit(G, vx, vy)) is not None:
+    for vx in range(0, maxvx + 1):
+        for vy in range(-maxvy, maxvy + 1):
+            if (y := hit(vx, vy, xmin, xmax, ymin, ymax)) is not None:
                 if y > best:
                     best = y
                 cnt += 1
