@@ -1,0 +1,110 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+import functools
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+from termcolor import colored
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+    return True
+
+def mag(pairs):
+    r = re.compile(r'\[(\d+),(\d+)\]')
+    while '[' in pairs:
+        dbg(f"{pairs=}")
+        pairs = r.sub(lambda m: str(
+            3*int(m.group(1)) + 2*int(m.group(2))
+        ), pairs)
+        dbg(pairs)
+    return pairs
+
+def reduce(p):
+
+    while True:
+        dbg(f"RED: {p}")
+        change = False
+
+        r1 = re.compile(r'\[(\d+),(\d+)\]')
+        for m in r1.finditer(p):
+            bef = p[:m.start()]
+            aft = p[m.end():]
+            if bef.count('[') - bef.count(']') == 4:
+                n1 = int(m.group(1))
+                n2 = int(m.group(2))
+                bef = re.sub(
+                    r'(.*\D)(\d+)',
+                    lambda m: m.group(1) + str(int(m.group(2))+n1),
+                    bef
+                )
+                aft = re.sub(
+                    r'(\d+)',
+                    lambda m: str(int(m.group(1))+n2),
+                    aft,
+                    count=1,
+                )
+                p = bef + '0' + aft
+                change = True
+                break
+
+        if not change:
+            def _split(m):
+                n = int(m.group(1))
+                n1 = n // 2
+                n2 = n // 2 + (n % 2)
+                return f"[{n1},{n2}]"
+
+            p, n = re.subn(r'(\d\d+)', _split, p, count=1)
+            change = (n > 0)
+
+        if not change:
+            dbg(f"RED RES: {p}")
+            return p
+
+def add(p1, p2):
+    p = f"[{p1},{p2}]"
+    return reduce(p)
+
+def run(args):
+
+    f = open(args.path, "r")
+    nums = []
+    for line in f:
+        line = line.strip()
+        nums.append(line)
+
+    p = functools.reduce(add, nums)
+    print(mag(p))
+
+    res = []
+    for n1 in nums:
+        for n2 in nums:
+            res.append(int(mag(add(n1, n2))))
+    print(max(res))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
