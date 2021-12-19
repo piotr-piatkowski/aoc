@@ -1,0 +1,191 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+#from termcolor import colored
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def pr(P, padding=None, colors={}, color_sets=[], always=False, clear=False):
+    if debug or always:
+        x0 = min(p[0] for p in P)
+        x1 = max(p[0] for p in P)
+        y0 = min(p[1] for p in P)
+        y1 = max(p[1] for p in P)
+
+        if padding is None:
+            if type(P) is set:
+                padding = 2
+            else:
+                padding = max(len(str(v)) for v in P.values()) + 1
+
+        graph = ''
+        for y in range(y0, y1+1):
+            vals = []
+            for x in range(x0, x1+1):
+                if type(P) is set:
+                    if (x,y) in P:
+                        v = '#'
+                    else:
+                        v = '.'
+                else:
+                    v = P.get((x,y), ' ')
+                v = str(v).rjust(padding)
+                if c := colors.get((x,y)):
+                    v = colored(v, c)
+                else:
+                    for cs, col in color_sets:
+                        if (x,y) in cs:
+                            v = colored(v, col)
+                            break
+
+                vals.append(v)
+            graph += ''.join(vals) + '\n'
+
+        if clear:
+            print(chr(27) + "[2J", end='')
+            print(chr(27) + "[H", end='')
+
+        print(graph)
+
+def rotate(x, y, z, axis):
+    if axis == 'x':
+        return(x, -z, y)
+    elif axis == 'y':
+        return(-z, y, x)
+    elif axis == 'z':
+        return(-y, x, z)
+
+def variant1(x, y, z, n):
+    assert 0 <= n < 24
+
+    rotations = 'z' * (n % 4)
+    n = n // 4
+
+    if n < 4:
+        rotations = 'y' * n + rotations
+    elif n == 4:
+        rotations = 'x' + rotations
+    elif n == 5:
+        rotations = 'xxx' + rotations
+
+    for r in rotations:
+        x, y, z = rotate(x, y, z, r)
+
+    return x, y, z
+
+def variant(x, y, z, n):
+    return (
+        (x, y, z),
+        (-y, x, z),
+        (-x, -y, z),
+        (y, -x, z),
+        (-z, y, x),
+        (-y, -z, x),
+        (z, -y, x),
+        (y, z, x),
+        (-x, y, -z),
+        (-y, -x, -z),
+        (x, -y, -z),
+        (y, x, -z),
+        (z, y, -x),
+        (-y, z, -x),
+        (-z, -y, -x),
+        (y, -z, -x),
+        (x, -z, y),
+        (z, x, y),
+        (-x, z, y),
+        (-z, -x, y),
+        (x, z, -y),
+        (-z, x, -y),
+        (-x, -z, -y),
+        (z, -x, -y),
+    )[n]
+
+def common_points(s1, s2, offset, var):
+    c = 0
+    for p in s2:
+        p = tuple(p[i] + offset[i] for i in range(3))
+        if p in s1:
+            c += 1
+    return c
+
+def match(s1, s2):
+    for var in range(24):
+        s2a = set(variant(*p, var) for p in s2)
+        for p1 in s1:
+            for p2 in s2a:
+                offset = tuple(p1[i] - p2[i] for i in range(3))
+                cc = common_points(s1, s2a, offset, var)
+                #dbg(f"{offset=} {var=} {cc=}")
+                if cc >= 12:
+                    return var, offset
+    return None
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    scanners = []
+    cur_sc = None
+    for line in f:
+        line = line.strip()
+        if m := re.search(r'scanner (\d+)', line):
+            cur_sc = set()
+            scanners.append(cur_sc)
+        elif line == '':
+            pass
+        else:
+            cur_sc.add(tuple(int(n) for n in line.split(',')))
+
+    sea = scanners.pop()
+    offs = []
+    while scanners:
+        dbg(f"{len(scanners)=}")
+        for sc in scanners:
+            if r := match(sea, sc):
+                var, offset = r
+                offs.append(offset)
+                dbg(f"Found! {var=} {offset=}")
+                for p in sc:
+                    p = variant(*p, var)
+                    p = tuple(p[i] + offset[i] for i in range(3))
+                    sea.add(p)
+                scanners = [s for s in scanners if s != sc]
+                break
+
+    print(len(sea))
+
+    dists = []
+    for s1 in offs:
+        for s2 in offs:
+            dists.append(sum(abs(s1[i]-s2[i]) for i in range(3)))
+    print(max(dists))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
