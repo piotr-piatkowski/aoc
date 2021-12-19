@@ -6,11 +6,8 @@ import re
 import argparse
 import math
 import time
-import heapq
 from collections import defaultdict, Counter
-from itertools import permutations
 from copy import deepcopy
-#from termcolor import colored
 
 debug = False
 
@@ -18,34 +15,7 @@ def dbg(s):
     if debug:
         print(s)
 
-def rotate(x, y, z, axis):
-    if axis == 'x':
-        return(x, -z, y)
-    elif axis == 'y':
-        return(-z, y, x)
-    elif axis == 'z':
-        return(-y, x, z)
-
-# This was used to generate faster version below
-def variant_old(x, y, z, n):
-    assert 0 <= n < 24
-
-    rotations = 'z' * (n % 4)
-    n = n // 4
-
-    if n < 4:
-        rotations = 'y' * n + rotations
-    elif n == 4:
-        rotations = 'x' + rotations
-    elif n == 5:
-        rotations = 'xxx' + rotations
-
-    for r in rotations:
-        x, y, z = rotate(x, y, z, r)
-
-    return x, y, z
-
-def variant(x, y, z, n):
+def rotate(x, y, z, n):
     return (
         (x, y, z),
         (-y, x, z),
@@ -73,25 +43,17 @@ def variant(x, y, z, n):
         (z, -x, -y),
     )[n]
 
-def common_points(s1, s2, offset):
-    c = 0
-    for p in s2:
-        p = tuple(p[i] + offset[i] for i in range(3))
-        if p in s1:
-            c += 1
-    return c
-
 def match(s1, s2):
-    for var in range(24):
-        s2a = set(variant(*p, var) for p in s2)
+    for rot in range(24):
+        s2rot = set(rotate(*p, rot) for p in s2)
         c = Counter()
         for p1 in s1:
-            for p2 in s2a:
+            for p2 in s2rot:
                 offset = tuple(p1[i] - p2[i] for i in range(3))
                 c[offset] += 1
-        offset, cnt = c.most_common()[0]
+        offset, cnt = c.most_common(1)[0]
         if cnt >= 12:
-            return var, offset
+            return rot, offset
     return None
 
 
@@ -116,11 +78,11 @@ def run(args):
         dbg(f"{len(scanners)=}")
         for sc in scanners:
             if r := match(sea, sc):
-                var, offset = r
+                rot, offset = r
                 offs.append(offset)
-                dbg(f"Found! {var=} {offset=}")
+                dbg(f"Found! {rot=} {offset=}")
                 for p in sc:
-                    p = variant(*p, var)
+                    p = rotate(*p, rot)
                     p = tuple(p[i] + offset[i] for i in range(3))
                     sea.add(p)
                 scanners = [s for s in scanners if s != sc]
