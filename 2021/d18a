@@ -1,0 +1,336 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+import functools
+from collections import defaultdict, namedtuple
+from itertools import permutations
+from copy import deepcopy
+from termcolor import colored
+from recordclass import recordclass
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+    return True
+
+def mag(pairs):
+    r = re.compile(r'\[(\d+),(\d+)\]')
+    while '[' in pairs:
+        dbg(f"{pairs=}")
+        pairs = r.sub(lambda m: str(
+            3*int(m.group(1)) + 2*int(m.group(2))
+        ), pairs)
+        dbg(pairs)
+    return pairs
+
+def reduce(p):
+
+    while True:
+        dbg(f"RED: {p}")
+        change = False
+
+        r1 = re.compile(r'\[(\d+),(\d+)\]')
+        for m in r1.finditer(p):
+            bef = p[:m.start()]
+            aft = p[m.end():]
+            if bef.count('[') - bef.count(']') == 4:
+                n1 = int(m.group(1))
+                n2 = int(m.group(2))
+                bef = re.sub(
+                    r'(.*\D)(\d+)',
+                    lambda m: m.group(1) + str(int(m.group(2))+n1),
+                    bef
+                )
+                aft = re.sub(
+                    r'(\d+)',
+                    lambda m: str(int(m.group(1))+n2),
+                    aft,
+                    count=1,
+                )
+                p = bef + '0' + aft
+                change = True
+                break
+
+        if not change:
+            def _split(m):
+                n = int(m.group(1))
+                n1 = n // 2
+                n2 = n // 2 + (n % 2)
+                return f"[{n1},{n2}]"
+
+            p, n = re.subn(r'(\d\d+)', _split, p, count=1)
+            change = (n > 0)
+
+        if not change:
+            dbg(f"RED RES: {p}")
+            return p
+
+def add(p1, p2):
+    p = f"[{p1},{p2}]"
+    return reduce(p)
+
+class Parser:
+    def __init__(self, string):
+        self.string = string
+        self.slen = len(string)
+        self.pos = 0
+
+    def size_left(self):
+        return self.slen - self.pos
+
+    def not_empty(self):
+        return self.size_left() > 0
+
+    def peek(self, n=1):
+        assert self.size_left() >= n
+        return self.string[self.pos:self.pos+n]
+
+    def pop(self, n=1):
+        v = self.peek(n)
+        self.pos += n
+        #dbg(f"Getting {n} chars: '{v}'")
+        return v
+
+    def pop_ch(self, exp_ch):
+        ch = self.pop()
+        assert ch == exp_ch
+
+    DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+    def pop_num(self, signed=False, base=10):
+        v = ''
+        assert self.not_empty()
+        if signed and self.string[self.pos] == '-':
+            v = self.pop_n(1)
+            assert self.not_empty()
+        while self.not_empty() and self.peek().lower() in self.DIGITS[:base]:
+            v += self.pop()
+        return int(v, base)
+
+    def pop_bin(self):
+        return self.pop_num(base=2)
+
+class Node:
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.left = None
+        self.right = None
+        self.value = None
+        self.level = parent.level + 1 if parent else 0
+
+    def __repr__(self):
+        if self.value is not None:
+            s = str(self.value)
+        else:
+            s = f"[{self.left},{self.right}]"
+        if self.parent is None:
+            s = f"Node({s})"
+        return s
+
+    def magnitude(self):
+        if self.value is None:
+            return self.left.magnitude() * 3 + self.right.magnitude() * 2
+        else:
+            return self.value
+
+    def child(self, left=True):
+        if left:
+            return self.left
+        else:
+            return self.right
+
+    def nearest(self, left):
+        right = not left
+        #dbg(f"Looking for nearest {'left' if left else 'right'} from {self}")
+        p = self
+        pprev = p
+        while p.parent and p.parent.child(left) is p:
+            dbg(f"s1 {p=}")
+            pprev = p
+            p = p.parent
+
+        #dbg(f"s11 {p=} {p.parent=}")
+
+        if p.parent:
+            p = p.parent.child(left)
+        else:
+            if p.child(left) is pprev:
+                #dbg(f"not found")
+                return None
+            else:
+                p = p.child(left)
+
+        #dbg(f"s2 {p=}")
+
+        while p and p.value is None:
+            #dbg(f"s3 {p=}")
+            p = p.child(right)
+
+        #dbg(f"Final: {p}")
+        return p
+
+    def nearest_new(self, left):
+        right = not left
+        dbg(f"Looking for nearest {'left' if left else 'right'} from {self}")
+        p = self.parent
+        pprev = self
+        while p and p.child(left) is pprev:
+            pprev = p
+            p = p.parent
+
+        if not p:
+            dbg("Not found")
+            return None
+
+        p = p.child(left)
+
+        while p and p.value is None:
+            p = p.child(right)
+
+        dbg(f"Found {p}")
+        return p
+
+    def nearest_left(self):
+        return self.nearest(True)
+
+    def nearest_right(self):
+        return self.nearest(False)
+
+    def iterate(self):
+        if self.left:
+            for n in self.left.iterate():
+                yield n
+        yield self
+        if self.right:
+            for n in self.right.iterate():
+                yield n
+
+    def explode(self):
+        assert self.left.value is not None
+        assert self.right.value is not None
+        nl = self.nearest_left()
+        if nl:
+            dbg(f"Changing nl from {nl.value}")
+            assert nl.value is not None
+            nl.value += self.left.value
+        nr = self.nearest_right()
+        if nr:
+            dbg(f"Changing nr from {nr.value}")
+            assert nr.value is not None
+            nr.value += self.right.value
+        self.left = None
+        self.right = None
+        self.value = 0
+
+    def split(self):
+        assert self.value is not None
+        assert self.parent is not None
+
+        n = Node(parent=self.parent)
+        n.left = Node(parent=n)
+        n.right = Node(parent=n)
+        n.left.value = self.value // 2
+        n.right.value = self.value // 2 + self.value % 2
+
+        if self.parent.left is self:
+            self.parent.left = n
+        else:
+            self.parent.right = n
+
+    def reduce(self):
+        while True:
+            dbg(f"RED: {self}")
+            for n in self.iterate():
+                #dbg(f"  {n=} {n.level=}")
+                if n.level >= 4 and n.value is None:
+                    dbg(f"Exploding {n}")
+                    n.explode()
+                    break
+
+                if n.value is not None and n.value >= 10:
+                    dbg(f"Splitting {n}")
+                    n.split()
+                    break
+            else:
+                break
+
+    def add(self, other):
+        for root in (self, other):
+            for n in root.iterate():
+                n.level += 1
+        root = Node()
+        root.left = self
+        root.left.parent = root
+        root.right = other
+        root.right.parent = root
+        return root
+
+class ParserD18(Parser):
+    def parse(self, parent=None):
+        node = Node(parent=parent)
+        if self.peek() == '[':
+            self.pop_ch('[')
+            node.left = self.parse(parent=node)
+            self.pop_ch(',')
+            node.right = self.parse(parent=node)
+            self.pop_ch(']')
+        else:
+            node.value = self.pop_num()
+        return node
+
+
+def run(args):
+
+    f = open(args.path, "r")
+
+    nums = []
+    for line in f:
+        line = line.strip()
+        n = ParserD18(line).parse()
+        dbg(f"{line=} {n=}")
+        nums.append(n)
+
+    sum = None
+    for n in nums:
+        n = deepcopy(n)
+        if sum is None:
+            sum = n
+        else:
+            sum = sum.add(n)
+        sum.reduce()
+        dbg(f"RED RES: {sum=}")
+    print(sum.magnitude())
+
+#    res = []
+#    for n1 in nums:
+#        for n2 in nums:
+#            n = deepcopy(n1)
+#            n.add(deepcopy(n2))
+#            dbg(f"{n1=} {n2=} {n=}")
+#            n.reduce()
+#            res.append(n.magnitude())
+#    print(max(res))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-d18.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
