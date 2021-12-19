@@ -7,7 +7,7 @@ import argparse
 import math
 import time
 import heapq
-from collections import defaultdict
+from collections import defaultdict, Counter
 from itertools import permutations
 from copy import deepcopy
 #from termcolor import colored
@@ -18,48 +18,6 @@ def dbg(s):
     if debug:
         print(s)
 
-def pr(P, padding=None, colors={}, color_sets=[], always=False, clear=False):
-    if debug or always:
-        x0 = min(p[0] for p in P)
-        x1 = max(p[0] for p in P)
-        y0 = min(p[1] for p in P)
-        y1 = max(p[1] for p in P)
-
-        if padding is None:
-            if type(P) is set:
-                padding = 2
-            else:
-                padding = max(len(str(v)) for v in P.values()) + 1
-
-        graph = ''
-        for y in range(y0, y1+1):
-            vals = []
-            for x in range(x0, x1+1):
-                if type(P) is set:
-                    if (x,y) in P:
-                        v = '#'
-                    else:
-                        v = '.'
-                else:
-                    v = P.get((x,y), ' ')
-                v = str(v).rjust(padding)
-                if c := colors.get((x,y)):
-                    v = colored(v, c)
-                else:
-                    for cs, col in color_sets:
-                        if (x,y) in cs:
-                            v = colored(v, col)
-                            break
-
-                vals.append(v)
-            graph += ''.join(vals) + '\n'
-
-        if clear:
-            print(chr(27) + "[2J", end='')
-            print(chr(27) + "[H", end='')
-
-        print(graph)
-
 def rotate(x, y, z, axis):
     if axis == 'x':
         return(x, -z, y)
@@ -68,7 +26,8 @@ def rotate(x, y, z, axis):
     elif axis == 'z':
         return(-y, x, z)
 
-def variant1(x, y, z, n):
+# This was used to generate faster version below
+def variant_old(x, y, z, n):
     assert 0 <= n < 24
 
     rotations = 'z' * (n % 4)
@@ -114,7 +73,7 @@ def variant(x, y, z, n):
         (z, -x, -y),
     )[n]
 
-def common_points(s1, s2, offset, var):
+def common_points(s1, s2, offset):
     c = 0
     for p in s2:
         p = tuple(p[i] + offset[i] for i in range(3))
@@ -125,13 +84,14 @@ def common_points(s1, s2, offset, var):
 def match(s1, s2):
     for var in range(24):
         s2a = set(variant(*p, var) for p in s2)
+        c = Counter()
         for p1 in s1:
             for p2 in s2a:
                 offset = tuple(p1[i] - p2[i] for i in range(3))
-                cc = common_points(s1, s2a, offset, var)
-                #dbg(f"{offset=} {var=} {cc=}")
-                if cc >= 12:
-                    return var, offset
+                c[offset] += 1
+        offset, cnt = c.most_common()[0]
+        if cnt >= 12:
+            return var, offset
     return None
 
 
