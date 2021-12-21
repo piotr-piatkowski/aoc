@@ -1,0 +1,111 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from collections import defaultdict, Counter
+from itertools import permutations, product
+from copy import deepcopy
+from termcolor import colored
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def p1(pos):
+
+    pos = list(pos)
+    points = [0, 0]
+
+    dice = 1
+    rolls = 0
+
+    pl = 0
+    while max(points) < 1000:
+        r = 0
+        for _ in range(3):
+            r += dice
+            rolls += 1
+            dice += 1
+            if dice > 100:
+                dice -= 100
+
+        pos[pl] = (pos[pl] + r - 1) % 10 + 1
+
+        points[pl] += pos[pl]
+
+        dbg(f"{pl=} {pos=} {points=}")
+
+        pl = (pl + 1) % 2
+
+    print(min(points) * rolls)
+
+
+def p2(pos):
+
+    games = {(tuple(pos), (0, 0), 0): 1}
+    won = defaultdict(int)
+
+    res_probs = Counter(sum(t) for t in product((1,2,3), repeat=3))
+
+    while games:
+        g2 = defaultdict(int)
+        for (pos, res, pl), cnt in games.items():
+            for r, chance in res_probs.items():
+                newpos = list(pos)
+                newpos[pl] += r
+                while newpos[pl] > 10:
+                    newpos[pl] -= 10
+                newpos = tuple(newpos)
+
+                newres = list(res)
+                newres[pl] += newpos[pl]
+                newres = tuple(newres)
+
+                newpl = (pl + 1) % 2
+
+                dbg(f"{r=} {pos=} {newpos=} {res=} {newres=}")
+
+                if newres[pl] >= 21:
+                    won[pl] += cnt * chance
+                else:
+                    g2[(newpos, newres, newpl)] += cnt * chance
+        games = g2
+
+    print(max(won.values()))
+
+
+def run(args):
+
+    pos = []
+
+    f = open(args.path, "r")
+    for line in f:
+        pp = int(line.strip().split()[-1])
+        pos.append(pp)
+
+    p1(pos)
+    p2(pos)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
