@@ -20,15 +20,13 @@ def dbg(s):
         print(s)
     return True
 
-def mag(pairs):
+def mag(s):
     r = re.compile(r'\[(\d+),(\d+)\]')
-    while '[' in pairs:
-        dbg(f"{pairs=}")
-        pairs = r.sub(lambda m: str(
+    while '[' in s:
+        s = r.sub(lambda m: str(
             3*int(m.group(1)) + 2*int(m.group(2))
-        ), pairs)
-        dbg(pairs)
-    return pairs
+        ), s)
+    return s
 
 def reduce(p):
 
