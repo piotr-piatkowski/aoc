@@ -49,14 +49,16 @@ def p1(pos):
 
 def p2(pos):
 
-    games = {(tuple(pos), (0, 0), 0): 1}
+    games = {(tuple(pos), (0, 0)): 1}
     won = defaultdict(int)
 
+    # all possible sums of 3 dice throws, with counts
     res_probs = Counter(sum(t) for t in product((1,2,3), repeat=3))
 
+    pl = 0
     while games:
         g2 = defaultdict(int)
-        for (pos, res, pl), cnt in games.items():
+        for (pos, res), cnt in games.items():
             for r, chance in res_probs.items():
                 newpos = list(pos)
                 newpos[pl] += r
@@ -68,15 +70,14 @@ def p2(pos):
                 newres[pl] += newpos[pl]
                 newres = tuple(newres)
 
-                newpl = (pl + 1) % 2
-
                 dbg(f"{r=} {pos=} {newpos=} {res=} {newres=}")
 
                 if newres[pl] >= 21:
                     won[pl] += cnt * chance
                 else:
-                    g2[(newpos, newres, newpl)] += cnt * chance
+                    g2[(newpos, newres)] += cnt * chance
         games = g2
+        pl = (pl + 1) % 2
 
     print(max(won.values()))
 
