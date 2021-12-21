@@ -57,7 +57,7 @@ def p2(pos):
 
     pl = 0
     while games:
-        g2 = defaultdict(int)
+        games2 = defaultdict(int)
         for (pos, res), cnt in games.items():
             for r, chance in res_probs.items():
                 newpos = list(pos)
@@ -75,8 +75,8 @@ def p2(pos):
                 if newres[pl] >= 21:
                     won[pl] += cnt * chance
                 else:
-                    g2[(newpos, newres)] += cnt * chance
-        games = g2
+                    games2[(newpos, newres)] += cnt * chance
+        games = games2
         pl = (pl + 1) % 2
 
     print(max(won.values()))
