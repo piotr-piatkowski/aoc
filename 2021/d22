@@ -1,0 +1,122 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def fill_world(world, cubes):
+    for i, cube in enumerate(cubes):
+        dbg(f"TODO: {len(cubes) - i}")
+        xyz1 = cube[0]
+        xyz2 = cube[1]
+        for x in range(xyz1[0], xyz2[0]):
+            for y in range(xyz1[1], xyz2[1]):
+                for z in range(xyz1[2], xyz2[2]):
+                    if cube[2]:
+                        world.add((x,y,z))
+                    else:
+                        world.discard((x,y,z))
+
+def run(args):
+
+    f = open(args.path, "r")
+    cubes1 = []
+    cubes2 = []
+    pos = [set(), set(), set()]
+    for line in f:
+        line = line.strip()
+        st, coords = line.split(' ')
+        xyz1 = []
+        xyz2 = []
+        init_zone = True
+        for i, t in enumerate(coords.split(',')):
+            v1, v2 = t[2:].split('..')
+            v1 = int(v1)
+            v2 = int(v2) + 1
+            if v1 < -50 or v2 > 51:
+                init_zone = False
+            xyz1.append(v1)
+            xyz2.append(v2)
+            pos[i].add(v1)
+            pos[i].add(v2)
+
+        c = (xyz1, xyz2, st=='on')
+        if init_zone:
+            cubes1.append(c)
+        cubes2.append(c)
+
+    # p1
+    W = set()
+    fill_world(W, cubes1)
+    print(len(W))
+
+    # p2 - map coords on smaller values
+    s2r = [{}, {}, {}]
+    r2s = [{}, {}, {}]
+    for i in range(3):
+        for j, p in enumerate(sorted(pos[i])):
+            s2r[i][j] = p
+            r2s[i][p] = j
+
+    def pos_s2r(xyz):
+        xyz2 = []
+        for i in range(3):
+            xyz2.append(s2r[i][xyz[i]])
+        return xyz2
+
+    def pos_r2s(xyz):
+        xyz2 = []
+        for i in range(3):
+            xyz2.append(r2s[i][xyz[i]])
+        return xyz2
+
+    cubes2s = [
+        (pos_r2s(cube[0]), pos_r2s(cube[1]), cube[2])
+        for cube in cubes2
+    ]
+
+    W = set()
+    fill_world(W, cubes2s)
+
+    c = 0
+    for x, y, z in W:
+        xyz1 = pos_s2r((x,y,z))
+        xyz2 = pos_s2r((x+1,y+1,z+1))
+        c += (
+            (xyz2[0] - xyz1[0]) *
+            (xyz2[1] - xyz1[1]) *
+            (xyz2[2] - xyz1[2])
+        )
+
+
+    print(c)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
