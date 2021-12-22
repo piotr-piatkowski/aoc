@@ -17,18 +17,29 @@ def dbg(s):
     if debug:
         print(s)
 
-def fill_world(world, cubes):
+def fill_world(cubes):
+    mins = [min(c[0][i] for c in cubes) for i in range(3)]
+    maxs = [max(c[1][i] for c in cubes) for i in range(3)]
+    sizes = [maxs[i] - mins[i] + 1 for i in range(3)]
+
+    world = bytearray(sizes[0] * sizes[1] * sizes[2])
+
     for i, cube in enumerate(cubes):
         dbg(f"TODO: {len(cubes) - i}")
         xyz1 = cube[0]
         xyz2 = cube[1]
         for x in range(xyz1[0], xyz2[0]):
+            x -= mins[0]
             for y in range(xyz1[1], xyz2[1]):
+                y -= mins[1]
                 for z in range(xyz1[2], xyz2[2]):
+                    z -= mins[2]
+                    off = (x * sizes[1] + y) * sizes[2] + z
                     if cube[2]:
-                        world.add((x,y,z))
+                        world[off] = 1
                     else:
-                        world.discard((x,y,z))
+                        world[off] = 0
+    return world, sizes
 
 def run(args):
 
@@ -59,23 +70,19 @@ def run(args):
         cubes2.append(c)
 
     # p1
-    W = set()
-    fill_world(W, cubes1)
-    print(len(W))
+    world, sizes = fill_world(cubes1)
+    print(world.count(1))
 
     # p2 - map coords on smaller values
-    s2r = [{}, {}, {}]
     r2s = [{}, {}, {}]
+    # map from small coord to its block size
+    s2size = [[], [], []]
     for i in range(3):
-        for j, p in enumerate(sorted(pos[i])):
-            s2r[i][j] = p
+        posi = sorted(pos[i])
+        for j, p in enumerate(posi):
             r2s[i][p] = j
-
-    def pos_s2r(xyz):
-        xyz2 = []
-        for i in range(3):
-            xyz2.append(s2r[i][xyz[i]])
-        return xyz2
+            if j + 1 < len(posi):
+                s2size[i].append(posi[j+1] - p)
 
     def pos_r2s(xyz):
         xyz2 = []
@@ -88,19 +95,21 @@ def run(args):
         for cube in cubes2
     ]
 
-    W = set()
-    fill_world(W, cubes2s)
+    world, sizes = fill_world(cubes2s)
 
     c = 0
-    for x, y, z in W:
-        xyz1 = pos_s2r((x,y,z))
-        xyz2 = pos_s2r((x+1,y+1,z+1))
-        c += (
-            (xyz2[0] - xyz1[0]) *
-            (xyz2[1] - xyz1[1]) *
-            (xyz2[2] - xyz1[2])
-        )
-
+    # For p2 offsets (mins) are always 0 so we can ignore them
+    pos = 0
+    while True:
+        pos = world.find(1, pos)
+        if pos < 0:
+            break
+        # off = (x * sizes[1] + y) * sizes[2] + z
+        x = (pos // (sizes[1] * sizes[2]))
+        y = (pos // sizes[2]) % sizes[1]
+        z = pos % sizes[2]
+        c += s2size[0][x] * s2size[1][y] * s2size[2][z]
+        pos += 1
 
     print(c)
 
