@@ -1,0 +1,205 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+import functools
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def pr(rooms, top):
+    if debug:
+        print(f'#############')
+        print(f'#{top}#')
+        for i in range(len(rooms[0])):
+            rrow = '#'.join([r[i] for r in rooms])
+            if i == 0:
+                print(f'###{rrow}###')
+            else:
+                print(f'  #{rrow}#  ')
+        print(f'  #########  ')
+
+ROOM_ENTRIES = [2, 4, 6, 8]
+
+@functools.lru_cache(maxsize=None)
+def home_ready(rooms, i):
+    r = rooms[i]
+    amph = chr(ord('A') + i)
+    return r.count('.') + r.count(amph) == len(r)
+
+
+@functools.lru_cache(maxsize=None)
+def can_move_home(rooms, top, pos, amph):
+    home = ord(amph) - ord('A')
+    if not home_ready(rooms, home):
+        #dbg(f"{amph} cannot into home (home occupied)")
+        return False
+    home_entry = ROOM_ENTRIES[home]
+    if pos > home_entry:
+        path = top[home_entry:pos]
+    else:
+        path = top[pos+1:home_entry+1]
+    #dbg(f"{amph} path to home: {path}")
+    return path.count('.') == len(path)
+
+PRICES = {'A': 1, 'B': 10, 'C': 100, 'D': 1000}
+
+@functools.lru_cache(maxsize=None)
+def possible_moves(rooms, top):
+
+    # First always try to move to home, if possible
+    for i, amph in enumerate(top):
+        if amph in 'ABCD':
+            #dbg(f"Trying move {amph} to home")
+            home = ord(amph) - ord('A')
+            if not can_move_home(rooms, top, i, amph):
+                continue
+            #dbg(f"{amph} is going home!")
+            new_rooms = list(rooms)
+            new_rooms[home] = rooms[home][1:] + amph # ..AA -> .AAA
+            new_top = top[:i] + '.' + top[i+1:]
+            steps = abs(i-ROOM_ENTRIES[home]) + rooms[home].count('.')
+            cost = steps * PRICES[amph]
+            # Force this move
+            return [(tuple(new_rooms), new_top, amph, 'H', cost)]
+
+    # Also try to move directly from any room into home
+    for i, r in enumerate(rooms):
+        if not home_ready(rooms, i):
+            rstr = r.strip('.')
+            if rstr:
+                amph = rstr[0]
+                entry = ROOM_ENTRIES[i]
+                if top[entry] == '.' and can_move_home(rooms, top, entry, amph):
+                    new_rooms = list(rooms)
+                    home = ord(amph) - ord('A')
+                    new_rooms[home] = rooms[home][1:] + amph
+                    new_rooms[i] = rooms[i].replace(amph, '.', 1)
+
+                    steps = (abs(entry-ROOM_ENTRIES[home])
+                             + r.count('.') + 1
+                             + rooms[home].count('.'))
+                    cost = steps * PRICES[amph]
+
+                    return [(tuple(new_rooms), top, amph, 'H', cost)]
+
+
+    # The only other possible moves are to move from any room
+    # (only top amphiphod can move) to the top place
+    opts = []
+    for i, r in enumerate(rooms):
+        # Never exit home room if there're no other aphs here
+        if home_ready(rooms, i):
+            continue
+        r = r.strip('.')
+        if r == '': # empty room
+            continue
+        amph = r[0]
+        entry = ROOM_ENTRIES[i]
+        if top[entry] != '.':
+            continue # exit blocked by other amph
+
+        # It doesn't make sense to move out of room just to stay in entry,
+        # so we consider only moving at least one dot left or right.
+        new_rooms = list(rooms)
+        new_rooms[i] = rooms[i].replace(amph, '.', 1)
+
+        steps = rooms[i].count('.') + 1
+
+        # try left and right
+        for dx in (-1, +1):
+            if top[entry+dx] == '.' and top[entry+dx] == '.':
+                ti = entry + dx
+                while 0 <= ti < len(top) and top[ti] == '.':
+                    if ti not in ROOM_ENTRIES:
+                        new_top = top[:ti] + amph + top[ti+1:]
+                        cost = (steps + abs(ti-entry)) * PRICES[amph]
+                        opts.append((tuple(new_rooms), new_top, amph, ti, cost))
+                    ti += dx
+
+    return opts
+
+def is_solved(rooms, top):
+    for amph in 'ABCD':
+        r = rooms[ord(amph) - ord('A')]
+        if r.count(amph) < len(r):
+            return False
+    return True
+
+def solve(rooms, top, moves):
+
+    #dbg(f"After {moves}")
+    #pr(rooms, top)
+
+    if is_solved(rooms, top):
+        return [moves]
+
+    solved = []
+    for nrooms, ntop, amph, target, cost in possible_moves(rooms, top):
+        solved += solve(nrooms, ntop, moves + [(amph, target, cost)])
+    return solved
+
+def run(args):
+
+    # My input, p1
+    rooms_p1 = (
+        'BC',
+        'DD',
+        'CB',
+        'AA'
+    )
+    # Sample input, p2
+    rooms_p1ex = (
+        'BDDA',
+        'CCBD',
+        'BBAC',
+        'DACA'
+    )
+    # My input, p2
+    rooms_p2 = (
+        'BDDC',
+        'DCBD',
+        'CBAB',
+        'AACA'
+    )
+
+    #pr(rooms, top)
+
+    for rooms in (rooms_p1, rooms_p2):
+        top = '.' * 11
+        solutions = solve(rooms, top, [])
+
+        costs = []
+        for s in solutions:
+            cc = sum(m[2] for m in s)
+            costs.append(cc)
+            dbg(f"{cc} {s}")
+        print(min(costs))
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?',# default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
