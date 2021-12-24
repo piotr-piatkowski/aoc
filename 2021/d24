@@ -18,65 +18,43 @@ def dbg(s):
     if debug:
         print(s)
 
-class Command:
-    def __init__(self, line):
-        self.cmd, *self.args = line.split()
-
-    def arg(self, r, regs):
-        if r in 'wxyz':
-            return regs[r]
+def comp_prog(lines):
+    code = ''
+    for l in lines:
+        if l.startswith('inp'):
+            assert l == 'inp w'
+            code += "w = inp.pop(0)\n"
         else:
-            return int(r)
-
-    def arg0(self, regs):
-        return self.arg(self.args[0], regs)
-
-    def arg1(self, regs):
-        return self.arg(self.args[1], regs)
-
-    def process(self, regs, inp):
-        if self.cmd == 'inp':
-            regs[self.args[0]] = inp.pop(0)
-        elif self.cmd == 'add':
-            regs[self.args[0]] = self.arg0(regs) + self.arg1(regs)
-        elif self.cmd == 'mul':
-            regs[self.args[0]] = self.arg0(regs) * self.arg1(regs)
-        elif self.cmd == 'div':
-            res = self.arg0(regs) / self.arg1(regs)
-            if res < 0:
-                res = -(int(abs(res)))
+            cmd, arg1, arg2 = l.split()
+            if cmd == 'add':
+                code += f"{arg1} = {arg1} + {arg2}\n"
+            elif cmd == 'mul':
+                code += f"{arg1} = {arg1} * {arg2}\n"
+            elif cmd == 'div':
+                code += f"{arg1} = int({arg1} / {arg2})\n"
+            elif cmd == 'mod':
+                code += f"{arg1} = int({arg1} % {arg2})\n"
+            elif cmd == 'eql':
+                code += f"{arg1} = int(bool({arg1} == {arg2}))\n"
             else:
-                res = int(res)
-            regs[self.args[0]] = res
-        elif self.cmd == 'mod':
-            regs[self.args[0]] = self.arg0(regs) % self.arg1(regs)
-        elif self.cmd == 'eql':
-            regs[self.args[0]] = int(bool(self.arg0(regs) == self.arg1(regs)))
-        else:
-            raise Exception(f"cmd: {self.cmd}")
-
-    def __repr__(self):
-        return f"Cmd({self.cmd}, {self.args})"
+                raise Exception(f"cmd: {cmd}")
+    dbg(code)
+    return compile(code, '<string>', 'exec')
 
 def run(args):
 
     f = open(args.path, "r")
-    prog = []
-    for line in f:
-        line = line.strip()
-        prog.append(Command(line))
-
-    # split program in separate parts starting with input
     prog_parts = []
     part = []
-    for cmd in prog:
-        if cmd.cmd == 'inp':
+    for line in f:
+        line = line.strip()
+        if line.startswith('inp'):
             if part:
-                prog_parts.append(part)
+                prog_parts.append(comp_prog(part))
             part = []
-        part.append(cmd)
+        part.append(line)
     if part:
-        prog_parts.append(part)
+        prog_parts.append(comp_prog(part))
 
     # To solve both p1 and p2 at once, we keep min and max for each state.
     # Min is updated only once, max with each digit so min has lowest
@@ -87,10 +65,9 @@ def run(args):
         new_states = {}
         for d in range(1, 10):
             for z, (digs_min, digs_max) in states.items():
-                regs = {"w": 0, "x": 0, "y": 0, "z": z}
+                regs = {"w": 0, "x": 0, "y": 0, "z": z, "inp": [d]}
                 inp = [d]
-                for cmd in pp:
-                    cmd.process(regs, inp)
+                exec(pp, regs)
                 z = regs['z']
                 # Keep old min if exists, always update max
                 if z in new_states:
