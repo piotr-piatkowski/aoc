@@ -1,0 +1,120 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from pprint import pprint
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+class Command:
+    def __init__(self, line):
+        self.cmd, *self.args = line.split()
+
+    def arg(self, r, regs):
+        if r in 'wxyz':
+            return regs[r]
+        else:
+            return int(r)
+
+    def arg0(self, regs):
+        return self.arg(self.args[0], regs)
+
+    def arg1(self, regs):
+        return self.arg(self.args[1], regs)
+
+    def process(self, regs, inp):
+        if self.cmd == 'inp':
+            regs[self.args[0]] = inp.pop(0)
+        elif self.cmd == 'add':
+            regs[self.args[0]] = self.arg0(regs) + self.arg1(regs)
+        elif self.cmd == 'mul':
+            regs[self.args[0]] = self.arg0(regs) * self.arg1(regs)
+        elif self.cmd == 'div':
+            res = self.arg0(regs) / self.arg1(regs)
+            if res < 0:
+                res = -(int(abs(res)))
+            else:
+                res = int(res)
+            regs[self.args[0]] = res
+        elif self.cmd == 'mod':
+            regs[self.args[0]] = self.arg0(regs) % self.arg1(regs)
+        elif self.cmd == 'eql':
+            regs[self.args[0]] = int(bool(self.arg0(regs) == self.arg1(regs)))
+        else:
+            raise Exception(f"cmd: {self.cmd}")
+
+    def __repr__(self):
+        return f"Cmd({self.cmd}, {self.args})"
+
+def run(args):
+
+    f = open(args.path, "r")
+    prog = []
+    for line in f:
+        line = line.strip()
+        prog.append(Command(line))
+
+    # split program in separate parts starting with input
+    prog_parts = []
+    part = []
+    for cmd in prog:
+        if cmd.cmd == 'inp':
+            if part:
+                prog_parts.append(part)
+            part = []
+        part.append(cmd)
+    if part:
+        prog_parts.append(part)
+
+    # To solve both p1 and p2 at once, we keep min and max for each state.
+    # Min is updated only once, max with each digit so min has lowest
+    # digits and max highest.
+    states = {0: ('', '')}
+
+    for i, pp in enumerate(prog_parts):
+        new_states = {}
+        for d in range(1, 10):
+            for z, (digs_min, digs_max) in states.items():
+                regs = {"w": 0, "x": 0, "y": 0, "z": z}
+                inp = [d]
+                for cmd in pp:
+                    cmd.process(regs, inp)
+                z = regs['z']
+                # Keep old min if exists, always update max
+                if z in new_states:
+                    new_states[z] = (new_states[z][0], digs_max + str(d))
+                else:
+                    new_states[z] = (digs_min + str(d), digs_max + str(d))
+        states = new_states
+        print(i, len(prog_parts), len(states))
+
+    print(states[0][0])
+    print(states[0][1])
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
