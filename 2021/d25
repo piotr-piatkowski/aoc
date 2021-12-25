@@ -1,0 +1,147 @@
+#!/usr/bin/python3.8
+
+import sys
+import os
+import re
+import argparse
+import math
+import time
+import heapq
+from collections import defaultdict
+from itertools import permutations
+from copy import deepcopy
+from termcolor import colored
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def pr(P, padding=None, colors={}, color_sets=[], always=False, clear=False):
+    if debug or always:
+        x0 = min(p[0] for p in P)
+        x1 = max(p[0] for p in P)
+        y0 = min(p[1] for p in P)
+        y1 = max(p[1] for p in P)
+
+        if padding is None:
+            if type(P) is set:
+                padding = 2
+            else:
+                padding = max(len(str(v)) for v in P.values()) + 1
+
+        graph = ''
+        for y in range(y0, y1+1):
+            vals = []
+            for x in range(x0, x1+1):
+                if type(P) is set:
+                    if (x,y) in P:
+                        v = '#'
+                    else:
+                        v = '.'
+                else:
+                    v = P.get((x,y), ' ')
+                v = str(v).rjust(padding)
+                if c := colors.get((x,y)):
+                    v = colored(v, c)
+                else:
+                    for cs, col in color_sets:
+                        if (x,y) in cs:
+                            v = colored(v, col)
+                            break
+
+                vals.append(v)
+            graph += ''.join(vals) + '\n'
+
+        if clear:
+            print(chr(27) + "[2J", end='')
+            print(chr(27) + "[H", end='')
+
+        print(graph)
+
+
+def neighb(P, x, y, diag):
+    n = [
+        (x+1, y),
+        (x-1, y),
+        (x, y+1),
+        (x, y-1)
+    ]
+    if diag:
+        n += [
+            (x+1, y+1),
+            (x+1, y-1),
+            (x-1, y+1),
+            (x-1, y-1)
+        ]
+    return [p for p in n if p in P]
+
+def neighb8(P, x, y):
+    return neighb(P, x, y, diag=True)
+
+def neighb4(P, x, y):
+    return neighb(P, x, y, diag=False)
+
+def step(G, xsize, ysize):
+    G2 = {}
+    for (x, y), d in G.items():
+        if d == '>':
+            newx = (x+1) % xsize
+            if G[newx, y] == '.':
+                G2[newx, y] = '>'
+                G2[x,y] = '.'
+            else:
+                G2[x,y] = '>'
+        else:
+            G2.setdefault((x,y), d)
+    G = G2
+    G2 = {}
+    for (x, y), d in G.items():
+        if d == 'v':
+            newy = (y+1) % ysize
+            if G[x, newy] == '.':
+                G2[x, newy] = 'v'
+                G2[x,y] = '.'
+            else:
+                G2[x,y] = 'v'
+        else:
+            G2.setdefault((x,y), d)
+    return G2
+
+def run(args):
+
+    f = open(args.path, "r")
+    G = {}
+    for y, line in enumerate(f):
+        for x, r in enumerate(line.strip()):
+            G[x,y] = r
+
+    xsize = max(k[0] for k in G.keys()) + 1
+    ysize = max(k[1] for k in G.keys()) + 1
+
+    i = 0
+    while True:
+        G2 = step(G, xsize, ysize)
+        if G2 == G:
+            break
+        G = G2
+        i += 1
+
+    print(i+1)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
