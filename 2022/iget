@@ -1,0 +1,11 @@
+#!/bin/bash
+DAY=$(date +%-d)
+YEAR=$(date +%-Y)
+echo "DAY=$DAY, YEAR=$YEAR"
+source .env
+curl "https://adventofcode.com/$YEAR/day/$DAY/input" \
+  -o "input-d${DAY}.txt" \
+  -H 'authority: adventofcode.com' \
+  -H 'cache-control: max-age=0' \
+  -H "cookie: ${COOKIE}" \
+  --compressed
