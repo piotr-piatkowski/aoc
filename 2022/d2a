@@ -1,0 +1,59 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    vals = f.read().splitlines()
+
+    scores = [0, 0]
+
+    for v in vals:
+        ch1, ch2 = v.strip().split()
+        # Map to 0, 1 or 2
+        elf = ord(ch1) - ord('A')
+
+        # Part 1 - second column is your choice
+        you = ord(ch2) - ord('X')
+        # 0 - loose, 1 - draw, 2 - win
+        res = (you - elf + 1) % 3
+        scores[0] += (you + 1) + 3 * res
+
+        # Part 2 - second column is game result
+        res = ord(ch2) - ord('X')
+        you = (elf + res - 1) % 3
+        scores[1] += (you + 1) + 3 * res
+
+    print(scores[0])
+    print(scores[1])
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
