@@ -1,0 +1,64 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def priority(x):
+    x = ord(x)
+    if x <= ord('Z'):
+        return x - ord('A') + 27
+    else:
+        return x - ord('a') + 1
+
+def run(args):
+
+    sum1 = 0
+    sum2 = 0
+
+    f = open(args.path, "r")
+    tset = []
+    for line in f:
+        line = line.strip()
+        ll = len(line) // 2
+        left, right = line[:ll], line[ll:]
+        x, = set(left) & set(right)
+        sum1 += priority(x)
+
+        tset.append(line)
+
+        if len(tset) == 3:
+            x, = set(tset[0]) & set(tset[1]) & set(tset[2])
+            sum2 += priority(x)
+            tset = []
+
+    print(sum1)
+    print(sum2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
