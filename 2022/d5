@@ -15,15 +15,13 @@ def dbg(s):
 
 def run(args):
 
-    ST = 9
-
     stacks = defaultdict(list)
 
     f = open(args.path, "r")
     for line in f:
         line = line.rstrip()
         if '[' in line:
-            stnum = 0
+            stnum = 1
             while len(line) > 2:
                 if line[1] != ' ':
                     stacks[stnum].insert(0, line[1])
@@ -36,8 +34,6 @@ def run(args):
 
         elif m := re.match(r'move (\d+) from (\d+) to (\d+)', line):
             cnt, ff, tt = map(int, m.groups())
-            ff = ff - 1
-            tt = tt - 1
 
             p1stacks[tt] += reversed(p1stacks[ff][-cnt:])
             p1stacks[ff] = p1stacks[ff][:-cnt]
