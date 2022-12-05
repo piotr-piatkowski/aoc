@@ -1,0 +1,68 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    ST = 9
+
+    stacks = defaultdict(list)
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.rstrip()
+        if '[' in line:
+            stnum = 0
+            while len(line) > 2:
+                if line[1] != ' ':
+                    stacks[stnum].insert(0, line[1])
+                line = line[4:]
+                stnum += 1
+
+        elif line == '':
+            p1stacks = deepcopy(stacks)
+            p2stacks = deepcopy(stacks)
+
+        elif m := re.match(r'move (\d+) from (\d+) to (\d+)', line):
+            cnt, ff, tt = map(int, m.groups())
+            ff = ff - 1
+            tt = tt - 1
+
+            p1stacks[tt] += reversed(p1stacks[ff][-cnt:])
+            p1stacks[ff] = p1stacks[ff][:-cnt]
+
+            p2stacks[tt] += p2stacks[ff][-cnt:]
+            p2stacks[ff] = p2stacks[ff][:-cnt]
+
+    print(''.join(p1stacks[k][-1] for k in sorted(p1stacks.keys())))
+    print(''.join(p2stacks[k][-1] for k in sorted(p2stacks.keys())))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
