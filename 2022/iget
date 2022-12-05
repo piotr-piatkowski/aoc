@@ -3,9 +3,11 @@ DAY=$(date +%-d)
 YEAR=$(date +%-Y)
 echo "DAY=$DAY, YEAR=$YEAR"
 source .env
+INPUT="input-d${DAY}.txt"
 curl "https://adventofcode.com/$YEAR/day/$DAY/input" \
-  -o "input-d${DAY}.txt" \
+  -o $INPUT \
   -H 'authority: adventofcode.com' \
   -H 'cache-control: max-age=0' \
   -H "cookie: ${COOKIE}" \
   --compressed
+head $INPUT
