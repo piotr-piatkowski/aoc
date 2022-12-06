@@ -1,0 +1,51 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    line = f.readline().strip()
+
+    SIZES = (4, 14)
+    found = [False, False]
+
+    i = 0
+    while False in found:
+        for p, size in enumerate(SIZES):
+            if not found[p]:
+                s = line[i:i+size]
+                if len(set(s)) == size:
+                    print(i+size)
+                    found[p] = True
+        i += 1
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
