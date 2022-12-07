@@ -1,0 +1,67 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    sizes = defaultdict(int)
+    cwd = []
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.strip()
+        if line.startswith('$ cd '):
+            path = line[5:]
+            if path == '..':
+                cwd.pop()
+            else:
+                cwd.append(path)
+        elif m := re.match(r'(\d+) (\S+)', line):
+            size = int(m.group(1))
+            path = deepcopy(cwd)
+            while path:
+                sizes[tuple(path)] += size
+                path.pop()
+
+    sum = 0
+    for v in sizes.values():
+        if v <= 100000:
+            sum += v
+    print(sum)
+
+    free = 70000000 - sizes[tuple('/')]
+
+    for v in sorted(sizes.values()):
+        if free + v >= 30000000:
+            print(v)
+            break
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
