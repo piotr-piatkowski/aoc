@@ -1,0 +1,98 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    grid = defaultdict(int)
+
+    f = open(args.path, "r")
+    for y, line in enumerate(f):
+        row = line.strip()
+        for x, h in enumerate(row):
+            grid[x,y] = int(h)
+
+    dbg(grid)
+
+    p1 = 0
+    p2 = 0
+    for (x, y), h in grid.items():
+        vis1, vis2, vis3, vis4 = True, True, True, True
+        dst1, dst2, dst3, dst4 = 0, 0, 0, 0
+
+        xx = x - 1
+        while (xx,y) in grid:
+            dst1 += 1
+            if grid[xx,y] >= h:
+                vis1 = False
+                break
+            xx -= 1
+        
+        xx = x + 1
+        while (xx,y) in grid:
+            dst2 += 1
+            if grid[xx,y] >= h:
+                vis2 = False
+                break
+            xx += 1
+        
+        yy = y - 1
+        while (x,yy) in grid:
+            dst3 += 1
+            if grid[x,yy] >= h:
+                vis3 = False
+                break
+            yy -= 1
+        
+        yy = y + 1
+        while (x,yy) in grid:
+            dst4 += 1
+            if grid[x,yy] >= h:
+                vis4 = False
+                break
+            yy += 1
+
+        sc = dst1 * dst2 * dst3 * dst4
+        if sc > p2:
+            p2 = sc
+
+        if vis1 or vis2 or vis3 or vis4:
+            p1 += 1
+
+        dbg(f"{x=}, {y=}, {h=}, "
+            f"{dst1=}, {dst2=}, {dst3=}, {dst4=}, "
+            f"{vis1=}, {vis2=}, {vis3=}, {vis4=}, {sc=}")
+
+
+    print(p1)
+    print(p2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

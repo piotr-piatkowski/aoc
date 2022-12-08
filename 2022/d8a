@@ -1,0 +1,79 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+# left, right, up, down
+DIR2D4 = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+def run(args):
+
+    grid = dict()
+
+    f = open(args.path, "r")
+    for y, line in enumerate(f):
+        row = line.strip()
+        for x, h in enumerate(row):
+            grid[x,y] = int(h)
+
+    dbg(grid)
+
+    p1 = 0
+    p2 = 0
+
+    for (x, y), h in grid.items():
+
+        vis = False
+        dst = 1
+
+        for dx, dy in DIR2D4:
+            xx, yy = x+dx, y+dy
+            dvis = True
+            ddst = 0
+            while (xx, yy) in grid:
+                ddst += 1
+                if grid[xx, yy] >= h:
+                    dvis = False
+                    break
+                xx += dx
+                yy += dy
+            dst = dst * ddst
+            vis = vis or dvis
+
+        if vis:
+            p1 += 1
+        
+        if dst > p2:
+            p2 = dst
+
+    print(p1)
+    print(p2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
