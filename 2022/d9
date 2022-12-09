@@ -1,0 +1,91 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+DIRS = {
+    "R": (1, 0),
+    "U": (0, 1),
+    "L": (-1, 0),
+    "D": (0, -1)
+}
+
+
+def run(args):
+
+    rope = [[0,0] for i in range(10)]
+
+    tail2_pos = set([tuple(rope[1])])
+    tail10_pos = set([tuple(rope[-1])])
+
+    f = open(args.path, "r")
+    for line in f:
+        dir, cnt = line.strip().split()
+        cnt = int(cnt)
+        dbg(dir, cnt)
+        d = DIRS[dir]
+        for i in range(cnt):
+            rope[0][0] += d[0]
+            rope[0][1] += d[1]
+            for k in range(len(rope)-1):
+                cur=rope[k+1]
+                prev=rope[k]
+                if cur[0] - prev[0] > 1:
+                    cur[0] -= 1
+                    if cur[1] > prev[1]:
+                        cur[1] -= 1
+                    elif cur[1] < prev[1]:
+                        cur[1] += 1
+                if cur[0] - prev[0] < -1:
+                    cur[0] += 1
+                    if cur[1] > prev[1]:
+                        cur[1] -= 1
+                    elif cur[1] < prev[1]:
+                        cur[1] += 1
+                if cur[1] - prev[1] > 1:
+                    cur[1] -= 1
+                    if cur[0] > prev[0]:
+                        cur[0] -= 1
+                    elif cur[0] < prev[0]:
+                        cur[0] += 1
+                if cur[1] - prev[1] < -1:
+                    cur[1] += 1
+                    if cur[0] > prev[0]:
+                        cur[0] -= 1
+                    elif cur[0] < prev[0]:
+                        cur[0] += 1
+            tail2_pos.add(tuple(rope[1]))
+            tail10_pos.add(tuple(rope[-1]))
+            dbg(rope)
+
+    print(len(tail2_pos))
+    print(len(tail10_pos))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
