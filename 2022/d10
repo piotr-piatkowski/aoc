@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+DIRS = {
+    "R": (1, 0),
+    "U": (0, 1),
+    "L": (-1, 0),
+    "D": (0, -1)
+}
+
+def draw(cyc, x):
+    cyc = cyc - 1
+    cyc = cyc % 40
+    if cyc % 40 == 0:
+        print('')
+    if cyc < x - 1 or cyc > x + 1:
+        print('.',end='')
+    else:
+        print('#',end='')
+
+def run(args):
+
+    regx = 1
+    checks = [20, 60, 100, 140, 180, 220]
+    cyc = 1
+    sum = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        line = line.strip()
+        #print(line)
+        if line == 'noop':
+            draw(cyc, regx)
+            if cyc in checks:
+                #print(1, regx, cyc)
+                sum += regx * cyc
+        else:
+            cmd, val = line.split()
+            assert cmd == 'addx'
+            draw(cyc, regx)
+            if cyc in checks:
+                #print(2, regx, cyc)
+                sum += regx * cyc
+            cyc += 1
+            draw(cyc, regx)
+            if cyc in checks:
+                sum += regx * cyc
+                #print(3, regx, cyc)
+            regx += int(val)
+        cyc += 1
+
+    print(sum)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
