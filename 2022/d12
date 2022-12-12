@@ -1,0 +1,78 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import networkx as nx
+from collections import defaultdict
+from copy import deepcopy
+from frozendict import frozendict
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+DIRS = ((0,1), (0, -1), (1, 0), (-1, 0))
+
+
+def run(args):
+
+    grid = dict()
+    f = open(args.path, "r")
+    for y, line in enumerate(f):
+        for x, h in enumerate(line.strip()):
+            if h == 'S':
+                start = (x,y)
+                h = 0
+            elif h == 'E':
+                end = (x,y)
+                h = ord('z') - ord('a')
+            else:
+                h = ord(h) - ord('a')
+            grid[x,y] = h
+
+    g = nx.DiGraph()
+    g.add_nodes_from(grid.keys())
+
+    for x, y in grid.keys():
+        for dx, dy in DIRS:
+            n = (x+dx, y+dy)
+            if n in grid and grid[n] - grid[x,y] <= 1:
+                g.add_edge((x,y), n)
+
+    best = nx.shortest_path(g, start, end)
+    print(len(best)-1)
+
+    best = None
+    for n, h in grid.items():
+        if h == 0:
+            try:
+                p = nx.shortest_path(g, n, end)
+                if best is None or len(p) < best:
+                    best = len(p)
+            except nx.exception.NetworkXNoPath:
+                pass
+    print(best-1)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
