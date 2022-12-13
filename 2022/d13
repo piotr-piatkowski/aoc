@@ -1,0 +1,82 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import networkx as nx
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+def compare(p1, p2):
+    dbg(f"Comparing {p1} and {p2}")
+    if type(p1) is int and type(p2) is int:
+        return p1 - p2
+    else:
+        if type(p1) is int:
+            p1 = [p1]
+        if type(p2) is int:
+            p2 = [p2]
+        for i in range(max(len(p1), len(p2))):
+            if i >= len(p1):
+                return -1
+            if i >= len(p2):
+                return 1
+            v = compare(p1[i], p2[i])
+            if v != 0:
+                return v
+        return 0
+
+def run(args):
+
+    grid = dict()
+    f = open(args.path, "r")
+    data = f.read()
+    pairs = [[eval(pp) for pp in p.splitlines()] for p in data.split('\n\n')]
+
+    p1 = 0
+    for i, p in enumerate(pairs):
+        if compare(*p) < 0:
+            p1 += i + 1
+    print(p1)
+
+    items = []
+    for p in pairs:
+        items += p
+    divs = [ [[2]], [[6]] ]
+    items += divs
+
+    items = sorted(items, key=cmp_to_key(compare))
+
+    p2 = 1
+    for i, p in enumerate(items):
+        if p in divs:
+            p2 *= i + 1
+    print(p2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
