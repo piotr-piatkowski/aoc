@@ -1,0 +1,160 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import networkx as nx
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+import pygame
+
+pygame.init()
+
+ROCK = 1
+SAND = 2
+MOVING_SAND = 3
+COLORS = {
+    ROCK: (0, 0, 0),
+    SAND: (200, 100, 0),
+    MOVING_SAND: (150, 0, 0),
+}
+
+class Visual:
+    def __init__(self):
+        self.screen = pygame.display.set_mode([1500, 800])
+
+    def draw(self, grid, spos):
+        minx = min(p[0] for p in grid.keys())
+        miny = min(p[1] for p in grid.keys())
+
+        minx = 350
+
+        dbg(f"{minx=}, {miny=}")
+
+        self.screen.fill((255, 255, 255))
+        dbg("Drawing...")
+        for (x, y), v in (grid | {spos: MOVING_SAND}).items():
+            x = (x - minx + 10) * 4
+            y = (y - miny + 10) * 4
+            dbg(x, y)
+            pygame.draw.rect(self.screen, COLORS[v], pygame.Rect(x, y, 3, 3))
+        dbg("Done!")
+
+        #pygame.display.flip()
+        pygame.display.update()
+        self.check_events()
+
+    def check_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                return True
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit(1)
+        return False
+
+    def wait(self):
+        while not self.check_events():
+            pass
+
+
+debug = False
+
+vis = Visual()
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+def run(args):
+
+    grid = {}
+    maxy = 0
+    f = open(args.path, "r")
+    for path in f:
+        pairs = path.strip().split(' -> ')
+        pairs = [tuple(map(int, pp.split(','))) for pp in pairs]
+        dbg(pairs)
+
+        s = pairs.pop(0)
+        grid[s] = ROCK
+        while pairs:
+            n = pairs.pop(0)
+            dbg(f"from {s} to {n}")
+            if n[0] == s[0]:
+                if n[1] > s[1]:
+                    d = (0, 1)
+                else:
+                    d = (0, -1)
+            else:
+                if n[0] > s[0]:
+                    d = (1, 0)
+                else:
+                    d = (-1, 0)
+
+            while s != n:
+                s = (s[0] + d[0], s[1] + d[1])
+                if s[1] > maxy:
+                    maxy = s[1]
+                grid[s] = ROCK
+                dbg(f"adding {s}")
+
+    dbg(f"{grid=}, {maxy=}")
+
+    for p in (1, 2):
+        print(sim(grid, maxy, p))
+
+
+def sim(grid, maxy, part):
+
+    grid2 = deepcopy(grid)
+
+    abyss = False
+    while not abyss:
+        s = (500,0)
+        if s in grid2:
+            break
+        while True:
+            if s[1] == maxy+1:
+                if part == 1:
+                    abyss = True
+                else:
+                    grid2[s] = SAND
+                break
+
+            for dx in (0, -1, 1):
+                n = (s[0]+dx, s[1]+1)
+                if n not in grid2:
+                    s = n
+                    break
+            else:
+                grid2[s] = SAND
+                break
+            #vis.draw(grid2, s)
+        vis.draw(grid2, s)
+
+    vis.wait()
+
+    return(len(grid2)-len(grid))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
