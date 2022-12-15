@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import networkx as nx
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+def run(args):
+
+    grid = set()
+    row = set()
+    ROW = 2000000
+    LIM = 4000000
+    rowb = set()
+    f = open(args.path, "r")
+
+    rng = range(0, LIM+1)
+    rows = [[] for _ in rng]
+    for line in f:
+        m = re.match(r'Sensor at x=(-?\d+), y=(-?\d+):.*x=(-?\d+), y=(-?\d+)', line.strip())
+        sx, sy, bx, by = map(int, m.groups())
+        dbg(sx, sy, bx, by)
+        r = abs(bx-sx) + abs(by-sy)
+        dbg(r)
+
+        if by == ROW:
+            rowb.add(bx)
+
+        dbg(f"Beacond ({bx}, {by}), sensor ({sx}, {sy}), {r=}")
+        for row in rng:
+            p = (r - abs(row-sy)) + 1
+            if p > 0:
+                rows[row].append((sx-p+1, sx+p-1))
+
+    # Part 1
+    busy = rows[ROW]
+    bset = set()
+    for x1, x2 in busy:
+        for x in range(x1, x2+1):
+            bset.add(x) 
+    print(len(bset) - len(rowb))
+
+    # Part 2
+    for row in rng:
+        free = [(0,LIM)]
+        for busy in rows[row]:
+            free2 = []
+            for f in free:
+                if busy[1] < f[0] or busy[0] > f[1]:
+                    free2.append(f)
+                else:
+                    if busy[0] > f[0]:
+                        free2.append((f[0], min(busy[0]-1, f[1])))
+                    if busy[1] < f[1]:
+                        free2.append((max(f[0], busy[1]+1), f[1]))
+            free = free2
+        if free:
+            assert len(free) == 1 and free[0][0] == free[0][1]
+            freex = free[0][0]
+            freey = row
+            break
+
+    print(freex * LIM + freey)
+
+    exit(0)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

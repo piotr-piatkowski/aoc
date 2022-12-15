@@ -1,0 +1,66 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import networkx as nx
+import time
+import pygame
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+def run(args):
+
+    display = pygame.display.set_mode((600, 600))
+    display.fill((255, 255, 255))
+    pygame.draw.rect(display, (255, 0, 0), pygame.Rect(100, 100, 400, 400))
+    pygame.display.update()
+
+    f = open(args.path, "r")
+
+    for line in f:
+        m = re.match(r'Sensor at x=(-?\d+), y=(-?\d+):.*x=(-?\d+), y=(-?\d+)', line.strip())
+        sx, sy, bx, by = map(int, m.groups())
+        dbg(sx, sy, bx, by)
+        r = abs(bx-sx) + abs(by-sy)
+        dbg(r)
+
+        spoints = []
+        for p in ((sx, sy+r), (sx+r, sy), (sx, sy-r), (sx-r, sy)):
+            spoints.append((p[0]//10000 + 100, p[1]//10000 + 100))
+        pygame.draw.polygon(display, (0, 128, 0), spoints, width=1)
+        pygame.display.update()
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit(0)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+)a', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
