@@ -1,0 +1,104 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import networkx as nx
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+def run(args):
+
+    f = open(args.path, "r")
+
+    flows = dict()
+    G = nx.DiGraph()
+
+    for line in f:
+        m = re.match(r'Valve (\w+) has flow rate=(\d+); tunnels? leads? to valves? (.*)', line.strip())
+        assert m, line
+        valve, rate, others = m.groups()
+        flows[valve] = int(rate)
+        G.add_node(valve)
+        for v in others.split(', '):
+            G.add_node(v)
+            G.add_edge(valve, v)
+        dbg(valve, rate, others)
+
+    nz_valves = [k for k, v in flows.items() if v > 0]
+
+    dists = {}
+    for v1, v2 in itertools.product(nz_valves + ['AA'], repeat=2):
+        if v1 != v2:
+            dists[v1,v2] = len(nx.shortest_path(G, v1, v2)) - 1
+
+    print(best(flows, dists, 'AA', 30, set(nz_valves), []))
+
+    p2 = 0
+    for i in range(len(nz_valves)//2+1):
+        for s1 in itertools.combinations(nz_valves, i):
+            s1 = set(s1)
+            s2 = set(nz_valves) - s1
+            r = (best(flows, dists, 'AA', 26, s1, [])
+               + best(flows, dists, 'AA', 26, s2, []))
+            if r > p2:
+                p2 = r
+
+    print(p2)
+
+
+cache = {}
+
+def best(flows, dists, pos, tt, valves_left, path):
+
+    if not valves_left:
+        return 0
+
+    k = (pos, tt, tuple(sorted(valves_left)))
+    if k in cache:
+        return cache[k]
+
+    dbg(pos, tt, valves_left, path)
+
+    b = 0
+
+    for vv in valves_left:
+        d = dists[pos,vv]
+        new_tt = tt - d - 1
+        if new_tt > 0:
+            n = new_tt * flows[vv] + best(flows, dists, vv, new_tt, valves_left - {vv}, path + [vv])
+            if n > b:
+                b = n
+
+    cache[k] = b
+    return b
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
