@@ -1,0 +1,289 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import networkx as nx
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+import pygame
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+SHAPES = (
+    ("####",),
+
+    (" # ",
+     "###",
+     " # "),
+
+    ("  #",
+     "  #",
+     "###"),
+
+    ("#",
+     "#",
+     "#",
+     "#"),
+
+    ("##",
+     "##"),
+)
+
+EMPTY = 0
+WALL = (150, 0, 0)
+
+LEFT = (-1, 0)
+RIGHT = (1, 0)
+DOWN = (0, -1)
+UP = (0, 1)
+
+class Block:
+    def __init__(self, shape):
+        self.pixels = set()
+        for y, line in enumerate(reversed(shape)):
+            for x, v in enumerate(line):
+                if v == '#':
+                    self.pixels.add((x,y))
+        self.color = tuple(random.randint(0,250) for _ in 'RGB')
+        self.pos = None
+
+
+class Grid:
+    DPWIDTH = 500
+    DPHEIGHT = 900
+
+    # coordinates - bottom is y=0, then positive y go up
+    # x from left to right, 0 is left wall and 8 is right wall
+
+    def __init__(self, animate=False, fps=1):
+        self.grid = {}
+        self.maxy = 0
+        self.active_block = None
+        self.animate = animate
+        self.fps = fps
+        if self.animate:
+            self.display = pygame.display.set_mode((self.DPWIDTH, self.DPHEIGHT))
+            self.display.fill((255,255,255))
+            pygame.display.update()
+
+
+    def is_wall(self, pos):
+        x, y = pos
+        if x <= 0 or x >= 8:
+            return True
+        if y <= 0:
+            return True
+        return False
+
+    def get_pixel(self, pos):
+        if pos in self.grid:
+            return self.grid[pos]
+        if self.is_wall(pos):
+            return WALL
+        return EMPTY
+
+    def draw_pixel(self, pos, color):
+        x, y = pos
+        dpx = 20 + x * self.gridsize
+        dpy = self.DPHEIGHT - (y + 2) * self.gridsize
+        rect = (dpx, dpy, self.gridsize - 1, self.gridsize - 1)
+        pygame.draw.rect(self.display, color, rect)
+
+    def draw(self, sleep=True):
+        if not self.animate:
+            return
+        self.gridsize = min(20, max(2, self.DPHEIGHT // (self.maxy + 10)))
+
+        self.display.fill((255,255,255))
+
+        for x in range(0, 9):
+            for y in range(0, self.maxy+7):
+                c = self.get_pixel((x,y))
+                if c != EMPTY:
+                    self.draw_pixel((x,y), c)
+
+        if self.active_block:
+            block = self.active_block
+            bx, by = block.pos
+            for x, y in block.pixels:
+                self.draw_pixel((bx+x,by+y), block.color)
+
+        pygame.display.update()
+        if sleep:
+            time.sleep(1 / self.fps)
+        self.check_events()
+
+
+    def can_place(self, block, pos):
+        bx, by = pos
+        dbg(f"Checking block at {pos}")
+        for x, y in block.pixels:
+            if self.get_pixel((bx+x, by+y)) != EMPTY:
+                dbg(f"Collision at {bx+x}, {by+y}")
+                return False
+        return True
+
+    def new_block_pos(self):
+        return (3, self.maxy + 4)
+
+    def put(self, block):
+        if block.pos is None:
+            block.pos = self.new_block_pos()
+        bx, by = block.pos
+        for x, y in block.pixels:
+            self.grid[bx+x,by+y] = block.color
+            if self.maxy < by+y:
+                self.maxy = by+y
+
+    def move_active(self, dir):
+        block = self.active_block
+        bx, by = block.pos
+        (dx, dy) = dir
+        nbx = bx + dx
+        nby = by + dy
+
+        if self.can_place(block, (nbx, nby)):
+            block.pos = (nbx, nby)
+            return True
+        else:
+            return False
+
+    def put_active(self):
+        self.put(self.active_block)
+        self.active_block = None
+
+    def check_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                return True
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit(1)
+        return False
+
+    def wait_for_click(self):
+        if not self.animate:
+            return
+        while not self.check_events():
+            pass
+
+    def get_state_key(self):
+        st = []
+        for y in range(self.maxy - 3, self.maxy+1):
+            for x in range(8):
+                st.append(self.get_pixel((x,y)) == EMPTY)
+        return hash(tuple(st))
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    dirs = f.readline().strip()
+    dirs_len = len(dirs)
+    dirs = enumerate(itertools.cycle(dirs))
+
+    g = Grid(animate=args.animate, fps=args.fps)
+    g.draw(sleep=False)
+
+    g.wait_for_click()
+
+    states = {}
+    states_list = []
+
+    for i in range(args.bnum):
+        #print(i)
+        block = Block(SHAPES[i%len(SHAPES)])
+        block.pos = g.new_block_pos()
+        g.active_block = block
+        g.draw()
+        while True:
+            if dirs:
+                di, d = next(dirs)
+                if d == '<':
+                    d = LEFT
+                else:
+                    d = RIGHT
+                if g.move_active(d):
+                    g.draw()
+            if g.move_active(DOWN):
+                g.draw()
+            else:
+                break
+        g.put_active()
+
+        k = (g.get_state_key(), i % len(SHAPES), di % dirs_len)
+        if k in states:
+            cycle_start, start_maxy = states[k]
+            cycle_len = i - cycle_start
+            cycle_height = g.maxy - start_maxy
+
+            if args.use_cycles:
+                cycle_heights = []
+                for i in range(cycle_len):
+                    cycle_heights.append((states_list[(cycle_start+i)] - start_maxy)
+                                        % cycle_height)
+                n = args.bnum - cycle_start - 1
+                dbg(f"{cycle_heights=}")
+                dbg(f"{args.bnum=} {n=}")
+                before = start_maxy
+                inside = (n // cycle_len) * cycle_height
+                after = cycle_heights[n % cycle_len]
+                dbg(f"{before=} {inside=} {after=}")
+                p2 = before + inside + after
+                print(p2)
+                g.wait_for_click()
+                exit(0)
+        else:
+            states[k] = (i, g.maxy)
+            states_list.append(g.maxy)
+
+    print(g.maxy)
+    g.wait_for_click()
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('-nc', '--no-cycles', action='store_false', dest='use_cycles',
+            help='Use cycles in counting')
+    parser.add_argument('--bnum', type=int, default=-1,
+            help='Number of blocks to put')
+    parser.add_argument('--fps', type=int, default=1,
+            help='Number of animation frames per second')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+    parser.add_argument('--animate', '-a', action='store_true',
+            help='Enable animation')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    if args.bnum == -1:
+        args.bnum = 2022
+        run(args)
+        args.bnum = 1000000000000
+        run(args)
+    else:
+        run(args)
+
+main()
