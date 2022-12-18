@@ -1,0 +1,111 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import networkx as nx
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+import pygame
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+DIRS = (
+    (1, 0, 0),
+    (-1, 0, 0),
+    (0, 1, 0),
+    (0, -1, 0),
+    (0, 0, 1),
+    (0, 0, -1),
+)
+
+def run(args):
+
+    g = set()
+
+    mins = [None, None, None]
+    maxs = [None, None, None]
+
+    f = open(args.path, "r")
+    for line in f:
+        p = tuple(map(int,line.strip().split(',')))
+        g.add(p)
+        for i in range(3):
+            if mins[i] is None or p[i] < mins[i]:
+                mins[i] = p[i]
+            if maxs[i] is None or p[i] > maxs[i]:
+                maxs[i] = p[i]
+
+    p1 = 0
+    for x, y, z in g:
+        for dx, dy, dz in DIRS:
+            if (x+dx, y+dy, z+dz) not in g:
+                p1 += 1
+
+    print(p1)
+
+    def inside(p):
+        for i in range(3):
+            if p[i] < mins[i] - 1:
+                return False
+            if p[i] > maxs[i] + 1:
+                return False
+        return True
+
+    start = ((mins[0]-1, mins[1]-1, mins[2]-1))
+
+    assert inside(start)
+
+    size = (maxs[0]-mins[0]+2)*(maxs[1]-mins[1]+2)*(maxs[2]-mins[2]+2)
+    sys.setrecursionlimit(size + 100)
+
+    p2 = 0
+    air = set()
+
+    def travel(pos):
+        nonlocal p2
+        air.add(pos)
+        for d in DIRS:
+            pos2 = (pos[0]+d[0], pos[1]+d[1], pos[2]+d[2])
+            if not inside(pos2):
+                continue
+            if pos2 in g:
+                p2 += 1
+            elif pos2 not in air:
+                travel(pos2)
+
+    travel(start)
+    print(p2)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
