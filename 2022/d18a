@@ -1,0 +1,113 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import networkx as nx
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy
+from functools import cmp_to_key
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+import pygame
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+DIRS = (
+    (1, 0, 0),
+    (-1, 0, 0),
+    (0, 1, 0),
+    (0, -1, 0),
+    (0, 0, 1),
+    (0, 0, -1),
+)
+
+def run(args):
+
+    g = set()
+
+    mins = [None, None, None]
+    maxs = [None, None, None]
+
+    f = open(args.path, "r")
+    for line in f:
+        p = tuple(map(int,line.strip().split(',')))
+        g.add(p)
+        for i in range(3):
+            if mins[i] is None or p[i] < mins[i]:
+                mins[i] = p[i]
+            if maxs[i] is None or p[i] > maxs[i]:
+                maxs[i] = p[i]
+
+    # P1
+    p1 = 0
+    for x, y, z in g:
+        for dx, dy, dz in DIRS:
+            if (x+dx, y+dy, z+dz) not in g:
+                p1 += 1
+
+    print(p1)
+
+    # P2
+    # Find starting block - any with min x
+    for x, y, z in g:
+        if x == mins[0]:
+            start = (x, y, z)
+            break
+
+    def neg(d):
+        return (-d[0], -d[1], -d[2])
+
+    def vsum(d1, d2, d3=(0,0,0)):
+        return (d1[0]+d2[0]+d3[0], d1[1]+d2[1]+d3[1], d1[2]+d2[2]+d3[2])
+
+    # We mark face as (block_pos, direction_vector) tuple
+    bfs = [(start, (-1, 0, 0))]
+    visited = set(bfs)
+    while bfs:
+        pos, d = bfs.pop(0)
+        for d2 in DIRS:
+            if d2 != d and d2 != neg(d):
+                # 270°
+                if vsum(pos, d, d2) in g:
+                    n = (vsum(pos, d, d2), neg(d2))
+                # 180°
+                elif vsum(pos, d2) in g:
+                    n = (vsum(pos, d2), d)
+                else:
+                # 90°
+                    n = (pos, d2)
+                if n not in visited:
+                    visited.add(n)
+                    bfs.append(n)
+
+    print(len(visited))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
