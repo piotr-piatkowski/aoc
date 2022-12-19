@@ -1,0 +1,152 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import networkx as nx
+import random
+import time
+import pylru
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+import pygame
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+NONE = ''
+ORE = 'ore'
+CLAY = 'clay'
+OBSIDIAN = 'obs'
+GEODE = 'geo'
+ALL = [GEODE, OBSIDIAN, CLAY, ORE]
+
+dp_cache = pylru.lrucache(1000000)
+
+def find_best(bpid, costs, robots, resources, tt):
+
+    dpkey = hash((bpid, tuple(robots.items()), tuple(resources.items()), tt))
+    if dpkey in dp_cache:
+        return dp_cache[dpkey]
+
+    # Is it possible to build any geode robot before end of time?
+    # Just a rough estimation, as this is only optimization
+    max_res = copy(resources)
+    for res in ALL:
+        # assume we build new robot each minute, as wee need only
+        # lower bound
+        max_res[res] += (tt-1)*robots[res] + (tt-1)*(tt-2)//2
+    can_build = True
+    for res, n in costs[GEODE].items():
+        if max_res[res] < n:
+            can_build = False
+
+    if not can_build:
+        ret = tt*robots[GEODE]
+        dp_cache[dpkey] = ret
+        return ret
+
+    def mins_to_build_rob(rob):
+        max_tt = 0
+        for res, n in costs[rob].items():
+            if resources[res] < n:
+                if robots[res] == 0:
+                    return 0
+                else:
+                    needed = n - resources[res]
+                    if needed % robots[res] == 0:
+                        tt = needed // robots[res]
+                    else:
+                        tt = needed // robots[res] + 1
+                    if tt > max_tt:
+                        max_tt = tt
+        return max_tt + 1
+
+    #print(tt, dict(robots), dict(resources), sol)
+    best = tt * robots[GEODE]
+    if tt > 0:
+        for rob in ALL:
+            # Which robot would you like to build next?
+            #print(f"want to build {rob}")
+            mm = mins_to_build_rob(rob)
+            if mm and mm < tt:
+                new_resources = copy(resources)
+                for res, n in robots.items():
+                    new_resources[res] += mm * n
+                for res, n in costs[rob].items():
+                    new_resources[res] -= n
+                new_robots = copy(robots)
+                new_robots[rob] += 1
+                res = find_best(bpid, costs, new_robots, new_resources, tt - mm)
+                n = robots[GEODE] * mm + res
+                if n > best:
+                    #print(f"NEW BEST ({n} > {best})")
+                    #if n > 10:
+                    #    print(f"{n=} {best=} {tt=} {resources[GEODE]=} {robots[GEODE]=} {mm=} {res=}")
+                    best = n
+
+    if tt > 20:
+        print(f"Best sol for {tt=}: {best}")
+    ret = best
+    dp_cache[dpkey] = ret
+    return ret
+
+def run(args):
+
+    p1 = 0
+
+    f = open(args.path, "r")
+    for line in f:
+        words = line.split()
+        bpid = int(words[1][:-1])
+        if bpid == 1:
+            p1 += 21
+            continue
+        costs = {}
+        costs[ORE] = {ORE: int(words[6])}
+        costs[CLAY] = {ORE: int(words[12])}
+        costs[OBSIDIAN] = {ORE: int(words[18]), CLAY: int(words[21])}
+        costs[GEODE] = {ORE: int(words[27]), OBSIDIAN: int(words[30])}
+        print(costs)
+        resources = defaultdict(int)
+        robots = defaultdict(int)
+        robots[ORE] = 1
+        print(f"{bpid=} ...")
+        res = find_best(bpid, costs, robots, resources, 32)
+        print(f"{res=}")
+        p1 += bpid * res
+        dp_cache.clear()
+        if bpid == 3:
+            break
+
+    print(p1)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
