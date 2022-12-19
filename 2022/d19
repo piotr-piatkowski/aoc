@@ -6,16 +6,12 @@ import re
 import argparse
 import functools
 import itertools
-import networkx as nx
 import random
 import time
-import pylru
 from collections import defaultdict
 from copy import deepcopy, copy
 from functools import cmp_to_key
 
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-import pygame
 
 debug = False
 
@@ -30,7 +26,7 @@ OBSIDIAN = 'obs'
 GEODE = 'geo'
 ALL = [GEODE, OBSIDIAN, CLAY, ORE]
 
-dp_cache = pylru.lrucache(1000000)
+dp_cache = {}
 
 def find_best(bpid, costs, robots, resources, tt):
 
@@ -71,14 +67,19 @@ def find_best(bpid, costs, robots, resources, tt):
                         max_tt = tt
         return max_tt + 1
 
-    #print(tt, dict(robots), dict(resources), sol)
     best = tt * robots[GEODE]
     if tt > 0:
-        for rob in ALL:
+        times = {r: mins_to_build_rob(r) for r in ALL}
+        times = {k: v for k, v in times.items() if v > 0 and v < tt}
+        # If GEODE is the one we can build fastest, do it and skip other options
+        if GEODE in times and times[GEODE] <= min(t for t in times.values()):
+            options = [GEODE]
+        else:
+            options = ALL
+        for rob in options:
             # Which robot would you like to build next?
-            #print(f"want to build {rob}")
-            mm = mins_to_build_rob(rob)
-            if mm and mm < tt:
+            if rob in times:
+                mm = times[rob]
                 new_resources = copy(resources)
                 for res, n in robots.items():
                     new_resources[res] += mm * n
@@ -89,46 +90,42 @@ def find_best(bpid, costs, robots, resources, tt):
                 res = find_best(bpid, costs, new_robots, new_resources, tt - mm)
                 n = robots[GEODE] * mm + res
                 if n > best:
-                    #print(f"NEW BEST ({n} > {best})")
-                    #if n > 10:
-                    #    print(f"{n=} {best=} {tt=} {resources[GEODE]=} {robots[GEODE]=} {mm=} {res=}")
                     best = n
 
     if tt > 20:
-        print(f"Best sol for {tt=}: {best}")
+        dbg(f"Best sol for {tt=}: {best}")
     ret = best
     dp_cache[dpkey] = ret
     return ret
 
 def run(args):
 
-    p1 = 0
+    for p in (1, 2):
+        r = 0 if p == 1 else 1
+        f = open(args.path, "r")
+        for line in f:
+            words = line.split()
+            bpid = int(words[1][:-1])
+            costs = {}
+            costs[ORE] = {ORE: int(words[6])}
+            costs[CLAY] = {ORE: int(words[12])}
+            costs[OBSIDIAN] = {ORE: int(words[18]), CLAY: int(words[21])}
+            costs[GEODE] = {ORE: int(words[27]), OBSIDIAN: int(words[30])}
 
-    f = open(args.path, "r")
-    for line in f:
-        words = line.split()
-        bpid = int(words[1][:-1])
-        if bpid == 1:
-            p1 += 21
-            continue
-        costs = {}
-        costs[ORE] = {ORE: int(words[6])}
-        costs[CLAY] = {ORE: int(words[12])}
-        costs[OBSIDIAN] = {ORE: int(words[18]), CLAY: int(words[21])}
-        costs[GEODE] = {ORE: int(words[27]), OBSIDIAN: int(words[30])}
-        print(costs)
-        resources = defaultdict(int)
-        robots = defaultdict(int)
-        robots[ORE] = 1
-        print(f"{bpid=} ...")
-        res = find_best(bpid, costs, robots, resources, 32)
-        print(f"{res=}")
-        p1 += bpid * res
-        dp_cache.clear()
-        if bpid == 3:
-            break
-
-    print(p1)
+            resources = defaultdict(int)
+            robots = defaultdict(int)
+            robots[ORE] = 1
+            dbg(f"{bpid=} ...")
+            res = find_best(bpid, costs, robots, resources, 24 if p == 1 else 32)
+            dbg(f"{res=}")
+            if p == 1:
+                r += bpid * res
+            else:
+                r *= res
+            if p == 2 and  bpid == 3:
+                break
+            dp_cache.clear()
+        print(r)
 
 
 def main():
