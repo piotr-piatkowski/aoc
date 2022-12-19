@@ -233,8 +233,7 @@ def run(args):
             if args.use_cycles:
                 cycle_heights = []
                 for i in range(cycle_len):
-                    cycle_heights.append((states_list[(cycle_start+i)] - start_maxy)
-                                        % cycle_height)
+                    cycle_heights.append(states_list[cycle_start+i] - start_maxy)
                 n = args.bnum - cycle_start - 1
                 dbg(f"{cycle_heights=}")
                 dbg(f"{args.bnum=} {n=}")
