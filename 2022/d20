@@ -1,0 +1,87 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    nums = []
+    for i, line in enumerate(f):
+        nums.append((i, int(line.strip())))
+    dbg(nums)
+
+    nums2 = copy(nums)
+
+    def index_of(nums, n=None, i=None):
+        for ii, nn in enumerate(nums):
+            if n is not None and nn[1] == n:
+                return ii
+            if i is not None and nn[0] == i:
+                return ii
+        raise Exception(f"{n=} {i=} not found")
+
+    def decrypt(nums, nums2):
+        for orgi, n in nums:
+            i = index_of(nums2, i=orgi)
+            v = nums2.pop(i)
+            nums2.insert((i+n)%(len(nums2)), v)
+            dbg(n, [nn[1] for nn in nums2])
+
+    def result(nums):
+        res = 0
+        i = index_of(nums, n=0)
+        for d in (1000, 2000, 3000):
+            r = nums[(i+d)%len(nums)][1]
+            dbg(f"{d}th: {r}")
+            res += r
+        return res
+
+    decrypt(nums, nums2)
+    print(result(nums2))
+
+    nums = [(n[0], n[1] * 811589153) for n in nums]
+    nums2 = copy(nums)
+
+    for _ in range(10):
+        decrypt(nums, nums2)
+    print(result(nums2))
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
