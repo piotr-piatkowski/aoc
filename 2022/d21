@@ -1,0 +1,79 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+import sympy
+
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+
+
+def run(args):
+
+    vals = {}
+    f = open(args.path, "r")
+    for i, line in enumerate(f):
+        line = line.strip()
+        if m := re.match(r'(\w+): (\d+)', line):
+            vals[m.group(1)] = int(m.group(2))
+        else:
+            m = re.match(r'(\w+): (\w+) (.) (\w+)', line)
+            assert m, line
+            val, v1, op, v2 = m.groups()
+            vals[val] = (v1, op, v2)
+
+    def myeval(v, part):
+        if part == 2 and v == 'humn':
+            return sympy.symbols('x')
+        vv = vals[v]
+        if type(vv) is int:
+            return vv
+        else:
+            v1, op, v2 = vv
+            v1 = myeval(v1, part)
+            v2 = myeval(v2, part)
+            return eval(f"v1 {op} v2")
+
+    # part 1
+    print(round(myeval('root', part=1)))
+
+    # part 2
+    v1, op, v2 = vals['root']
+    equation = myeval(v1, part=2) - myeval(v2, part=2)
+    print(round(sympy.solve(equation)[0]))
+
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
