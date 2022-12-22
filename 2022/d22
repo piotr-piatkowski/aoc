@@ -1,0 +1,264 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+import sympy
+
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+
+DIRS=((1, 0), (0, 1), (-1, 0), (0, -1))
+
+RIGHT = 0
+DOWN = 1
+LEFT = 2
+UP = 3
+
+SIZE = 50
+
+# returns new x, y and rotation (possibly 0)
+def wrap2(x, y, di):
+    xx = (x-1) // SIZE
+    yy = (y-1) // SIZE
+
+    # Faces and their indexes as xx, yy
+    FA = 1, 0
+    FB = 2, 0
+    FC = 1, 1
+    FD = 0, 2
+    FE = 1, 2
+    FF = 0, 3
+
+    # A / 1
+    if (xx, yy) == FA and di == UP:
+        nn = FF
+        ndi = RIGHT
+    # B / 2
+    elif (xx, yy) == FB and di == UP:
+        nn = FF
+        ndi = UP
+    # B / 3
+    elif (xx, yy) == FB and di == RIGHT:
+        nn = FE
+        ndi = LEFT
+    # B / 4
+    elif (xx, yy) == FB and di == DOWN:
+        nn = FC
+        ndi = LEFT
+    # C / 5
+    elif (xx, yy) == FC and di == RIGHT:
+        nn = FB
+        ndi = UP
+    # E / 6
+    elif (xx, yy) == FE and di == RIGHT:
+        nn = FB
+        ndi = LEFT
+    # E / 7
+    elif (xx, yy) == FE and di == DOWN:
+        nn = FF
+        ndi = LEFT
+    # F / 8
+    elif (xx, yy) == FF and di == RIGHT:
+        nn = FE
+        ndi = UP
+    # F / 9
+    elif (xx, yy) == FF and di == DOWN:
+        nn = FB
+        ndi = DOWN
+    # F / 10
+    elif (xx, yy) == FF and di == LEFT:
+        nn = FA
+        ndi = DOWN
+    # D / 11
+    elif (xx, yy) == FD and di == LEFT:
+        nn = FA
+        ndi = RIGHT
+    # D / 12
+    elif (xx, yy) == FD and di == UP:
+        nn = FC
+        ndi = RIGHT
+    # C / 13
+    elif (xx, yy) == FC and di == LEFT:
+        nn = FD
+        ndi = DOWN
+    # A / 14
+    elif (xx, yy) == FA and di == LEFT:
+        nn = FD
+        ndi = RIGHT
+    else:
+        assert False, (xx, yy, di)
+
+    dx, dy = DIRS[di]
+    lx = (x-1+dx) % SIZE
+    ly = (y-1+dy) % SIZE
+
+    rot = (ndi - di) % 4
+
+    # rotate right rot times
+    for _ in range(rot):
+        lx, ly = -ly-1, lx
+    lx = lx % SIZE
+    ly = ly % SIZE
+
+    nx, ny = nn
+
+    return nx * SIZE + lx + 1, ny * SIZE + ly + 1, ndi
+
+
+def steps(path):
+    s = ''
+    i = 0
+    while i < len(path):
+        if path[i].isdigit():
+            s = ''
+            while i < len(path) and path[i].isdigit():
+                s = s + path[i]
+                i += 1
+            yield int(s)
+        else:
+            yield path[i]
+            i += 1
+
+def run(args):
+
+    G = defaultdict(lambda: ' ')
+    minx, miny, maxx, maxy = (None, None, None, None)
+
+    f = open(args.path, "r")
+    lab, path = f.read().split('\n\n')
+    path = path.strip()
+    for y, line in enumerate(lab.splitlines()):
+        y = y + 1
+        for x, tile in enumerate(line):
+            x = x + 1
+            if minx is None:
+                minx = x
+                maxx = x
+                miny = y
+                maxy = y
+            else:
+                if x > maxx:
+                    maxx = x
+                if x < minx:
+                    minx = x
+                if y > maxy:
+                    maxy = y
+                if y < miny:
+                    miny = y
+
+            G[x,y] = tile
+
+    def move(x, y, di, part):
+        oldx, oldy, olddi = x, y, di
+        dx, dy = DIRS[di]
+        x = x + dx
+        y = y + dy
+        if G[x,y] == ' ':
+            # need to wrap around
+            if part == 1:
+                if dx > 0:
+                    x = minx
+                    while G[x,y] == ' ':
+                        x += 1
+                elif dx < 0:
+                    x = maxx
+                    while G[x,y] == ' ':
+                        x -= 1
+                elif dy > 0:
+                    y = miny
+                    while G[x,y] == ' ':
+                        y += 1
+                elif dy < 0:
+                    y = maxy
+                    while G[x,y] == ' ':
+                        y -= 1
+                else:
+                    assert False, f"dir=({dx}, {dy})"
+            else:
+                x, y, di = wrap2(oldx, oldy, di)
+        if G[x,y] == '#':
+            return oldx, oldy, olddi, False
+        elif G[x,y] == '.':
+            return x, y, di, True
+        else:
+            assert False, (x, y, di, G[x,y])
+
+    def draw(px, py, di):
+        print(f"{px=} {py=} {di=}")
+        DCHR = ('>', 'v', '<', '^')
+        for y in range(miny, maxy+1):
+            for x in range(minx, maxx+1):
+                if px == x and py == y:
+                    print(DCHR[di], end='')
+                else:
+                    print(G[x,y], end='')
+            print()
+
+
+    for part in (1, 2):
+        x = 1
+        y = 1
+        while G[x, y] != '.':
+            x += 1
+
+        di = 0  # offset in DIRS
+
+        for step in steps(path):
+            dbg(f"{step=}")
+            if step == 'L':
+                di = (di-1) % 4
+            elif step == 'R':
+                di = (di+1) % 4
+            else:
+                dx, dy = DIRS[di]
+                for i in range(step):
+                    dbg(f"{i=} {x=} {y=} {dx=} {dy=}")
+                    x, y, di, moved = move(x, y, di, part)
+                    if not moved:
+                        break
+                    if args.draw:
+                        draw(x, y, di)
+            if args.draw:
+                draw(x, y, di)
+
+        print(x*4 + 1000 *y + di)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('-D', '--draw', action='store_true',
+            help='Draw labirynth')
+    parser.add_argument('-b', '--block-size', type=int, default=50,
+                        help="Size of the cube (50 for main, 4 for test)")
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global SIZE
+    SIZE = args.block_size
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
