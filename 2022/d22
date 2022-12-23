@@ -11,15 +11,12 @@ import time
 from collections import defaultdict
 from copy import deepcopy, copy
 from functools import cmp_to_key
-import sympy
-
 
 debug = False
 
 def dbg(*s):
     if debug:
         print(*s)
-
 
 DIRS=((1, 0), (0, 1), (-1, 0), (0, -1))
 
@@ -133,6 +130,7 @@ def steps(path):
             yield path[i]
             i += 1
 
+
 def run(args):
 
     G = defaultdict(lambda: ' ')
@@ -200,20 +198,22 @@ def run(args):
     def draw(px, py, di):
         print(f"{px=} {py=} {di=}")
         DCHR = ('>', 'v', '<', '^')
+        track[px,py] = DCHR[di]
         for y in range(miny, maxy+1):
             for x in range(minx, maxx+1):
-                if px == x and py == y:
-                    print(DCHR[di], end='')
+                if (x,y) in track:
+                    print(track[x,y], end='')
                 else:
                     print(G[x,y], end='')
             print()
-
 
     for part in (1, 2):
         x = 1
         y = 1
         while G[x, y] != '.':
             x += 1
+
+        track = {}
 
         di = 0  # offset in DIRS
 
