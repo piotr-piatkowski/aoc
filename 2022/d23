@@ -1,0 +1,168 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+RIGHT = (1,0)
+DOWN = (0,1)
+LEFT = (-1,0)
+UP = (0,-1)
+
+NORTH = UP
+SOUTH = DOWN
+WEST = LEFT
+EAST = RIGHT
+
+DIRS = (NORTH, SOUTH, WEST, EAST)
+
+def neighb(x, y, d):
+    if d == RIGHT:
+        return ((x+1, y-1), (x+1, y), (x+1, y+1))
+    elif d == LEFT:
+        return ((x-1, y-1), (x-1, y), (x-1, y+1))
+    elif d == UP:
+        return ((x-1, y-1), (x, y-1), (x+1, y-1))
+    elif d == DOWN:
+        return ((x-1, y+1), (x, y+1), (x+1, y+1))
+
+def get_bounds(G):
+    minx, miny, maxx, maxy = (None, None, None, None)
+    for x, y in G.keys():
+        if minx is None:
+            minx = x
+            maxx = x
+            miny = y
+            maxy = y
+        else:
+            if x > maxx:
+                maxx = x
+            if x < minx:
+                minx = x
+            if y > maxy:
+                maxy = y
+            if y < miny:
+                miny = y
+    return minx, miny, maxx, maxy
+
+def draw(G):
+    minx, miny, maxx, maxy = get_bounds(G)
+    for y in range(miny-1, maxy+2):
+        for x in range(minx-1, maxx+2):
+            if (x,y) in G:
+                print('#', end='')
+            else:
+                print('.', end='')
+        print()
+
+def res(G):
+    minx, miny, maxx, maxy = get_bounds(G)
+    return (maxx-minx+1)*(maxy-miny+1)-len(G.keys())
+
+
+def run(args):
+
+    G = defaultdict(int)
+
+    f = open(args.path, "r")
+    for y, line in enumerate(f):
+        for x, tile in enumerate(line):
+            if tile == '#':
+                G[x,y] = 1
+
+    def move(G, di):
+        props = {}
+        pcounts = defaultdict(int)
+        for x, y in G.keys():
+            n = 0
+            for dx in range(-1, 2):
+                for dy in range(-1, 2):
+                    if (dx != 0 or dy != 0) and (x+dx,y+dy) in G:
+                        n += 1
+            if n == 0:
+                props[x,y] = x,y
+            else:
+                for dii in range(4):
+                    n = 0
+                    d = DIRS[(di+dii)%4]
+                    for px, py in neighb(x, y, d):
+                        if (px, py) in G:
+                            n += 1
+                    if n == 0:
+                        px, py = x+d[0], y+d[1]
+                        props[x,y] = px, py
+                        pcounts[px,py] += 1
+                        break
+                else:
+                    props[x,y] = x,y
+
+
+        G.clear()
+        moved = 0
+        for (x, y), (px, py) in props.items():
+            if (x==px and y==py) or pcounts[px,py] > 1:
+                assert (x,y) not in G
+                G[x,y] = 1
+                dbg(f"{x,y} stays")
+            else:
+                assert (x,y) not in G
+                G[px,py] = 1
+                dbg(f"{x,y} moves to {px,py}")
+                moved += 1
+        return moved > 0
+
+    if args.draw:
+        dbg("initial:")
+        draw(G)
+    i = 1
+    while True:
+        if not move(G, (i-1)%4):
+            print(i) # part 2 answer
+            break
+        if i == 10:
+            print(res(G)) # part 1 answer
+        if args.draw:
+            dbg(f"After step {i}")
+            draw(G)
+        i += 1
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('-D', '--draw', action='store_true',
+            help='Draw labirynth')
+    parser.add_argument('-b', '--block-size', type=int, default=50,
+                        help="Size of the cube (50 for main, 4 for test)")
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global SIZE
+    SIZE = args.block_size
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
