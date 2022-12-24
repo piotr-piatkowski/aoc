@@ -1,0 +1,203 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+import math
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+RIGHT = (1,0)
+DOWN = (0,1)
+LEFT = (-1,0)
+UP = (0,-1)
+
+NORTH = UP
+SOUTH = DOWN
+WEST = LEFT
+EAST = RIGHT
+
+DIRS = (NORTH, SOUTH, WEST, EAST)
+
+def get_bounds(G):
+    minx, miny, maxx, maxy = (None, None, None, None)
+    for x, y in G.keys():
+        if minx is None:
+            minx = x
+            maxx = x
+            miny = y
+            maxy = y
+        else:
+            if x > maxx:
+                maxx = x
+            if x < minx:
+                minx = x
+            if y > maxy:
+                maxy = y
+            if y < miny:
+                miny = y
+    return minx, miny, maxx, maxy
+
+def run(args):
+
+    G = defaultdict(lambda: '#')
+
+    f = open(args.path, "r")
+    for y, line in enumerate(f):
+        for x, tile in enumerate(line.strip()):
+            if tile in ('#', '.'):
+                G[x,y] = tile
+            elif tile == '<':
+                G[x,y] = LEFT
+            elif tile == '>':
+                G[x,y] = RIGHT
+            elif tile == '^':
+                G[x,y] = UP
+            elif tile == 'v':
+                G[x,y] = DOWN
+            else:
+                assert False, tile
+
+    minx, miny, maxx, maxy = get_bounds(G)
+    assert minx == 0
+    assert miny == 0
+    W = maxx - 1
+    H = maxy - 1
+
+    # Lazy ;-)
+    NWW = W * H
+    if W == 100 and H == 35:
+        NWW = 700
+
+    GD = {dir: set() for dir in DIRS}
+    for i, dir in enumerate(DIRS):
+        for x in range(1, W+1):
+            for y in range(1, H+1):
+                if G[x,y] in DIRS:
+                    GD[G[x,y]].add((x,y))
+
+    def is_free(x, y, t):
+        if G[x,y] == '#' or x <= 0 or x > W or y <= 0 or y > H:
+            return False
+        for d, GG in GD.items():
+            if d == RIGHT:
+                x2 = (x - (t % W) - 1) % W + 1
+                y2 = y
+            elif d == LEFT:
+                x2 = (x + (t % W) - 1) % W + 1
+                y2 = y
+            elif d == DOWN:
+                x2 = x
+                y2 = (y - (t % H) - 1) % H + 1
+            elif d == UP:
+                x2 = x
+                y2 = (y + (t % H) - 1) % H + 1
+            else:
+                assert False, d
+            if (x2,y2) in GG:
+                #dbg(f"Point {x,y} busy at {t} due to dir {d}")
+                return False
+            #dbg(f"{x2,y2=} {d=} - free")
+        #dbg(f"Point {x,y} free at {t}")
+        return True
+
+    def neighbours(x, y):
+        for dx, dy in DIRS:
+            if 0 < x+dx <= W and 0 < y+dy <= H:
+                yield (x+dx, y+dy)
+
+    def best_path(start, end, t0):
+
+        tiles = {}
+        for x in range(1,W+1):
+            for y in range(1,H+1):
+                tiles[x,y] = []
+                for t in range(NWW):
+                    if is_free(x,y,t):
+                        if (x,y) == end:
+                            tiles[x,y].append(1)
+                        else:
+                            tiles[x,y].append(math.inf)
+                    else:
+                        tiles[x,y].append(None)
+
+        # Start with neighbours of exit tile
+        todo = {n for n in neighbours(*end)}
+
+        while todo:
+            x, y = todo.pop()
+            optimized = False
+            for t in range(NWW):
+                if tiles[x,y][t] is not None:
+                    wait = 0
+                    while tiles[x,y][(t+wait)%NWW] is not None:
+                        t2 = (t + wait + 1) % NWW
+                        for x2, y2 in neighbours(x, y):
+                            b2 = tiles[x2,y2][t2]
+                            if b2 is not None and b2 + wait + 1 < tiles[x,y][t]:
+                                tiles[x,y][t] = b2 + wait + 1
+                                optimized = True
+                        wait += 1
+            if optimized:
+                dbg(f"{x,y} optimized")
+                for x2, y2 in neighbours(x,y):
+                    todo.add((x2, y2))
+
+            dbg(f"{len(todo)=}")
+
+        best = math.inf
+        for tt in range(NWW):
+            b = tiles[start][(t0+tt) % NWW]
+            if b is not None:
+                if b + tt < best:
+                    best = b + tt
+
+        return best
+
+
+    t1 = best_path((1,1), (W,H), 0)
+    dbg(f"{t1=}")
+    t2 = t1 + best_path((W,H), (1,1), t1)
+    dbg(f"{t2=}")
+    t3 = t2 + best_path((1,1), (W,H), t2)
+    dbg(f"{t3=}")
+
+    print(t1, t3)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('-D', '--draw', action='store_true',
+            help='Draw labirynth')
+    parser.add_argument('-b', '--block-size', type=int, default=50,
+                        help="Size of the cube (50 for main, 4 for test)")
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global SIZE
+    SIZE = args.block_size
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()
