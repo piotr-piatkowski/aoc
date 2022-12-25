@@ -4,14 +4,6 @@ import sys
 import os
 import re
 import argparse
-import functools
-import itertools
-import random
-import time
-import math
-from collections import defaultdict
-from copy import deepcopy, copy
-from functools import cmp_to_key
 
 debug = False
 
@@ -41,7 +33,6 @@ def add(nums):
 
     return s
 
-
 def run(args):
 
     nums = []
@@ -58,16 +49,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true',
             help='Enable debug')
-    parser.add_argument('-D', '--draw', action='store_true',
-            help='Draw labirynth')
-    parser.add_argument('-b', '--block-size', type=int, default=50,
-                        help="Size of the cube (50 for main, 4 for test)")
     parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
             help='Path to the input file')
 
     args = parser.parse_args()
-    global SIZE
-    SIZE = args.block_size
     global debug
     debug = args.debug
 
