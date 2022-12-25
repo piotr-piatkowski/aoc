@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import functools
+import itertools
+import random
+import time
+import math
+from collections import defaultdict
+from copy import deepcopy, copy
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(*s):
+    if debug:
+        print(*s)
+
+D2N = {'=': -2, '-': -1, '0': 0, '1': 1, '2': 2}
+N2D = {v: k for k, v in D2N.items()}
+
+def add(nums):
+    s = ''
+
+    maxlen = max([len(n) for n in nums])
+
+    ds = 0
+    i = 1
+    while i <= maxlen or ds > 0:
+        for n in nums:
+            if i <= len(n):
+                ds += D2N[n[-i]]
+        dd = (ds + 2) % 5 - 2
+        s = N2D[dd] + s
+        ds = (ds - dd) // 5
+        dbg(f"{i=} {dd=} {ds=} {s=}")
+        i += 1
+
+    return s
+
+
+def run(args):
+
+    nums = []
+    f = open(args.path, "r")
+    nums = [line.strip() for line in f]
+    print(add(nums))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    if m := re.match(r'(d\d+).*', script_name):
+        script_name = m.group(1)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('-D', '--draw', action='store_true',
+            help='Draw labirynth')
+    parser.add_argument('-b', '--block-size', type=int, default=50,
+                        help="Size of the cube (50 for main, 4 for test)")
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global SIZE
+    SIZE = args.block_size
+    global debug
+    debug = args.debug
+
+    run(args)
+
+main()

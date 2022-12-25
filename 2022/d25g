@@ -1,0 +1,8 @@
+D="=-012"
+s=''
+c=0
+N=open(0).read().split()
+for i in range(99):
+ for n in N: c+=D.index(n.zfill(99)[-i-1])-2
+ d=(c+2)%5-2;s=D[d+2]+s;c=(c-d)//5
+print(s.lstrip('0'))
