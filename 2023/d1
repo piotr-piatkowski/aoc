@@ -1,0 +1,53 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+DD = ["zero", "one", "two", "three", "four", 
+      "five", "six", "seven", "eight", "nine"]
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    for part in (1, 2):
+        sum = 0 
+        for l in lines:
+            if part == 2:
+                rr = re.compile("|".join(DD))
+                for i in range(10):
+                    l = rr.sub(lambda m: str(DD.index(m.group(0)))
+                                             + m.group(0)[-1], l)
+            digs = []
+            for ch in l:
+                if ch.isdigit():
+                    digs.append(ch)
+            sum += int(digs[0] + digs[-1])
+        print(sum)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
