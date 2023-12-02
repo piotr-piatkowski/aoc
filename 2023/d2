@@ -1,0 +1,56 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    sum1 = 0
+    sum2 = 0
+    for i, l in enumerate(lines):
+        gg, rest = l.split(": ")
+        counts = defaultdict(int)
+        for cc in rest.split('; '):
+            for nc in cc.split(', '):
+                n, col = nc.split()
+                n = int(n.strip())
+                col = col.strip()
+                counts[col] = max(counts[col], n)
+        dbg(f"{i=}, {counts=}")
+        if (counts['red'] <= 12 and counts['green'] <= 13 and 
+                counts['blue'] <= 14):
+            sum1 += i+1
+        pow = counts['red'] * counts['green'] * counts['blue']
+        sum2 += pow
+
+    print(sum1)
+    print(sum2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
