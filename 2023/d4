@@ -1,0 +1,54 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    sum1 = 0
+    res2 = {i: 1 for i in range(len(lines))}
+
+    for i, l in reversed(list(enumerate(lines))):
+        dbg(f'{i=}: {l=}')
+        l = re.sub(r'Card\s+\d+: ', '', l)
+        win, got = l.split(' | ')
+        win = set([int(x) for x in win.split()])
+        got = set([int(x) for x in got.split()])
+        r = len(win & got)
+        if r > 0:
+            sum1 += 2 ** (r-1)
+        for j in range(r):
+            res2[i] += res2[i+j+1]
+        dbg(res2)
+
+    print(sum1)
+    print(sum(res2.values()))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
