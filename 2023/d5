@@ -1,0 +1,118 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+# From python 3.12
+def batched(iterable, n):
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
+
+class Mapping:
+
+    def __init__(self, src, dest):
+        self.src = src
+        self.dest = dest
+        self.ranges = []
+        self.deltas = None
+
+    def add_range(self, to, fr, len):
+        self.ranges.append((to, fr, len))
+    
+    def map(self, val):
+        for to, fr, len in self.ranges:
+            if fr <= val < fr+len:
+                return val + to - fr
+        return val
+
+    def optimize(self):
+        self.ranges.sort(key=lambda x: x[1])
+        self.deltas = []
+        cur = 0
+        for to, fr, len in self.ranges:
+            if fr > cur:
+                self.deltas.append((fr, 0))
+            cur = fr+len
+            self.deltas.append((cur, to-fr))
+
+    def map_ranges(self, rr):
+        rr2 = []
+        for r1, r2 in rr:
+            p1 = 0
+            for p2, d in self.deltas:
+                n1 = max(p1, r1)
+                n2 = min(p2, r2)
+                if n1 < n2:
+                    rr2.append((n1+d, n2+d))
+                p1 = p2
+            if p1 < r2:
+                rr2.append((max(p1, r1), r2))
+        return rr2
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    cur_map = None
+    maps = {}
+    for i, l in enumerate(lines):
+        if m := re.match(r'seeds: (.*)', l):
+            seeds = [int(x) for x in m.group(1).split()]
+        elif m := re.match(r'(\w+)-to-(\w+) map:', l):
+            cur_map = Mapping(m.group(1), m.group(2))
+            maps[cur_map.src] = cur_map
+        elif m := re.match(r'(\d+) (\d+) (\d+)', l):
+            cur_map.add_range(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        elif l.strip() == '':
+            cur_map = None
+        else:
+            assert False, f'Unknown line {i}: {l}'
+
+    for m in maps.values():
+        m.optimize()
+
+    what = 'seed'
+    vals1 = seeds
+    vals2 = [(s, s+l) for s, l in batched(seeds, 2)]
+
+    while what in maps:
+        dbg(f'Applying {what} map')
+        vals1 = [maps[what].map(v) for v in vals1]
+        vals2 = maps[what].map_ranges(vals2)
+        what = maps[what].dest
+
+    print(min(vals1))
+    print(min([v[0] for v in vals2]))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
