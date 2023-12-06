@@ -1,0 +1,50 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    nums = list(map(int, lines))
+
+    print(sum(nums))
+
+    known = set()
+    f = 0
+    for d in itertools.cycle(nums):
+        f = f + d
+        if f in known:
+            print(f)
+            break
+        known.add(f)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

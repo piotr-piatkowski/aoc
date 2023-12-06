@@ -1,0 +1,63 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+from collections import defaultdict
+from copy import deepcopy
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    twos = 0
+    threes = 0
+    proto_id = None
+    for l in lines:
+        counts = defaultdict(int)
+        for ch in l:
+            counts[ch] += 1
+
+        if 2 in counts.values():
+            twos += 1
+        if 3 in counts.values():
+            threes += 1
+        
+        if proto_id is None:
+            for other in lines:
+                diffs = []
+                for i, ch in enumerate(l):
+                    if ch != other[i]:
+                        diffs.append(i)
+                if len(diffs) == 1:
+                    proto_id = l[:diffs[0]] + l[diffs[0]+1:]
+                    break
+
+    print(twos*threes)
+    print(proto_id)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

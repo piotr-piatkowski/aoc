@@ -1,0 +1,16 @@
+#!/bin/bash
+for DAY in 1 2 3 4
+do
+#DAY=$(date +%-d)
+YEAR=2018
+echo "DAY=$DAY, YEAR=$YEAR"
+source .env
+INPUT="input-d${DAY}.txt"
+curl "https://adventofcode.com/$YEAR/day/$DAY/input" \
+  -o $INPUT \
+  -H 'authority: adventofcode.com' \
+  -H 'cache-control: max-age=0' \
+  -H "cookie: ${COOKIE}" \
+  --compressed
+head $INPUT
+done
