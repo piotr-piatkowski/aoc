@@ -1,0 +1,75 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+# From python 3.12
+def batched(iterable, n):
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    times = lines[0].split()[1:]
+    dists = lines[1].split()[1:]
+
+    t2 = int(''.join(times))
+    d2 = int(''.join(dists))
+
+    times = [int(x) for x in times]
+    dists = [int(x) for x in dists]
+
+    r = 1
+    for i, t in enumerate(times):
+        d = dists[i]
+
+        comb = 0
+        for tt in range(t):
+            dd = (t-tt) * tt
+            if dd > d:
+                comb += 1
+        r *= comb
+
+    print(r)
+
+    t = symbols('t')
+    s = solve( (t2-t)*t - d2 )
+    dbg(s)
+
+    print(floor(s[1]) - ceil(s[0]) + 1)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
