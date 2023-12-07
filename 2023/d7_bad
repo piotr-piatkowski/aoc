@@ -1,0 +1,100 @@
+#!/usr/bin/python3
+
+# This is the approach with sorting hands according to the normal 
+# poker rules - so for example "AA555" is lower than "222KK" because
+# rank of triple is taken first. Similar "A2233" is lower than "5533A"
+# because higher pair is taken first, and so on. The actual puzzle used
+# different, actually much easier rules - for the same figure the rank is
+# decided by first card (in original order) that differs (i.e. if first
+# cards in both hands are the same - take second, if second are different -
+# take third, and so).
+#
+# So this is wrong solution, but I'm leaving it here because it was harder
+# then actual correct solution. This works only for P1 and I'm not sure if
+# it's 100% correct, but it seems so.
+
+import sys
+import os
+import re
+import argparse
+import itertools
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+crank = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2']
+
+rank = [
+    *[(c * 5,) for c in crank],
+    *[(c1 * 4, c2) for c1 in crank for c2 in crank if c1 != c2],
+    *[(c1 * 3, c2 * 2) for c1 in crank for c2 in crank if c1 != c2],
+    *[(c1 * 3, c2, c3) for c1 in crank for c2 in crank for c3 in crank
+       if c1 != c2 and c2 != c3 and c1 != c3],
+    *[(c1 * 2, c2 * 2) for c1 in crank for c2 in crank if c1 != c2],
+    *[(c * 2,) for c in crank],
+    *[(c1, c2, c3, c4, c5) 
+        for c1 in crank for c2 in crank for c3 in crank
+        for c4 in crank for c5 in crank
+        if c1 not in (c2, c3, c4, c5) and
+           c2 not in (c3, c4, c5) and
+           c3 not in (c4, c5) and 
+           c4 != c5],
+]
+
+# for r in rank:
+#     print(r) 
+# exit(0)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    all = []
+    for l in lines:
+        cards, bid = l.split(' ')
+        cards = ''.join(sorted(cards, key=lambda x: crank.index(x)))
+        #print(cards)
+        for i, r in enumerate(rank):
+            found = True
+            for sr in r:
+                if sr not in cards:
+                    found = False
+                    break
+            if found:
+                break
+        #print(i, cards, bid)
+        all.append((i, cards, bid))
+
+    sum = 0
+    for i, v in enumerate(sorted(all, key=lambda x: x[0], reverse=True)):
+        #print(i, v)
+        bid = v[2]
+        sum += int(bid) * (i+1)
+
+    print(sum)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
