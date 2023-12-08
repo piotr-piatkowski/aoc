@@ -1,0 +1,88 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+# From python 3.12
+def batched(iterable, n):
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    dirs = lines[0]
+    map = {}
+    for i, l in enumerate(lines[2:]):
+        m = re.match(r'(\w+) = \((\w+), (\w+)\)', l)
+        if m:
+            f, l, r = m.groups()
+            map[f] = (l, r)
+        else:
+            assert False, l
+
+    def next_z_steps(p, i):
+        while True:
+            d = dirs[i % len(dirs)]
+            if d == 'L':
+                p = map[p][0]
+            else:
+                p = map[p][1]
+            i += 1
+            if p.endswith('Z'):
+                return i
+
+    print(next_z_steps('AAA', 0))
+
+    # Now, actual data have very specific structure - if you start
+    # at any start node, you will reach the end node in some number
+    # of steps - and then, when you continue travel, you will reach
+    # the same end node in the same number of steps.
+    # So P2 is all about finding length of that path and then getting
+    # least common multiple of all that paths.
+
+    plens = []
+    for k in map.keys():
+        if k.endswith('A'):
+            plens.append(next_z_steps(k, 0))
+
+    print(math.lcm(*plens))
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
