@@ -43,7 +43,12 @@ def run(args):
         else:
             assert False, l
 
+    dbg(f"Total nodes: {len(map.keys())}")
+
     def next_z_steps(p, i):
+        nodes = set()
+        nodes.add(p)
+        start = p
         while True:
             d = dirs[i % len(dirs)]
             if d == 'L':
@@ -51,7 +56,9 @@ def run(args):
             else:
                 p = map[p][1]
             i += 1
+            nodes.add(p)
             if p.endswith('Z'):
+                dbg(f"From {start} to {p} in {i} steps, {len(nodes)} nodes")
                 return i
 
     print(next_z_steps('AAA', 0))
