@@ -6,7 +6,7 @@
 # because higher pair is taken first, and so on. The actual puzzle used
 # different, actually much easier rules - for the same figure the rank is
 # decided by first card (in original order) that differs (i.e. if first
-# cards in both hands are the same - take second, if second are different -
+# cards in both hands are the same - take second, if second are the same -
 # take third, and so).
 #
 # So this is wrong solution, but I'm leaving it here because it was harder
