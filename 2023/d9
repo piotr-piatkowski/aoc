@@ -1,0 +1,68 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+# From python 3.12
+def batched(iterable, n):
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(itertools.islice(it, n)):
+        yield batch
+
+def guess(nums, part):
+    if all(n == 0 for n in nums):
+        return 0
+    diffs = [nums[i+1] - nums[i] for i in range(len(nums)-1)]
+    if part == 1:
+        n = nums[-1] + guess(diffs, part)
+    else:
+        n = nums[0] - guess(diffs, part)
+    return n
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    for part in (1, 2):
+        sum = 0
+        for l in lines:
+            nums = [int(x) for x in l.split()]
+            sum += guess(nums, part)
+        print(sum)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
