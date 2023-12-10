@@ -1,0 +1,145 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+offsets = {
+    "N": (0, -1),
+    "S": (0, 1),
+    "E": (1, 0),
+    "W": (-1, 0),
+}
+
+dirs = {
+    "|": "NS",
+    "-": "EW",
+    "L": "NE",
+    "J": "NW",
+    "7": "SW",
+    "F": "SE",
+}
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    pipes = {}
+
+    for y, l in enumerate(lines):
+        for x, c in enumerate(l):
+            if c == ".":
+                continue
+            if c == "S":
+                start = (x, y)
+            else:
+                assert c in dirs.keys(), c
+                pipes[(x, y)] = c
+
+    def move(p, d):
+        return (p[0] + offsets[d][0], p[1] + offsets[d][1])
+
+    def connected(p):
+        if p not in pipes:
+            return set()
+        return {move(p, d) for d in dirs[pipes[p]]}
+
+    def find_loop(start):
+        prev = start
+        # start in any direction
+        p = connected(start).pop()
+        path = [p]
+        while p != start:
+            next = connected(p) - {prev}
+            assert len(next) == 1
+            prev = p
+            p = next.pop()
+            path.append(p)
+        return path
+
+    def find_inouts():
+        inouts = {}
+        for y in range(ROWS):
+            outside = True
+            last_pipe_from = None
+            for x in range(COLS):
+                p = pipes.get((x, y), '.')
+                if p == '.':
+                    inouts[x,y] = 'O' if outside else 'I'
+                elif p == '|':
+                    assert last_pipe_from is None
+                    outside = not outside
+                elif p == '-':
+                    assert last_pipe_from is not None
+                else:
+                    d = set(dirs[p])
+                    assert 'N' in d or 'S' in d
+                    if last_pipe_from is None:
+                        assert 'E' in d
+                        last_pipe_from = (d & {'N', 'S'}).pop()
+                    else:
+                        assert 'W' in d
+                        exit = (d & {'N', 'S'}).pop()
+                        if exit != last_pipe_from:
+                            outside = not outside
+                        last_pipe_from = None
+        return inouts
+
+    # find pipe at start position (it's constrained to have exactly 
+    # two pipes connected to it)
+    for p in dirs.keys():
+        pipes[start] = p
+        conn = list(connected(start))
+        if start in connected(conn[0]) and start in connected(conn[1]):
+            break
+    else:
+        assert False, "No S tile found"
+
+    ROWS = len(lines)
+    COLS = len(lines[0])
+
+    # P1
+    path = find_loop(start)
+    print(len(path)//2)
+
+    # Remove anything that's not part of the loop
+    for xy in list(pipes.keys()):
+        if xy not in path:
+            pipes[xy] = "."
+
+    inouts = find_inouts()
+
+    print(len([v for v in inouts.values() if v == 'I']))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
