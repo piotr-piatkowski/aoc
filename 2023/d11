@@ -1,0 +1,76 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    gals = set()
+
+    for y, l in enumerate(lines):
+        for x, c in enumerate(l):
+            if c == '#':
+                gals.add((x, y))
+
+    xmax = max(g[0] for g in gals)
+    ymax = max(g[1] for g in gals)
+
+    xgaps = set(range(xmax + 1))
+    ygaps = set(range(ymax + 1))
+
+    for x, y in gals:
+        xgaps.discard(x)
+        ygaps.discard(y)
+
+    def dist(x1, y1, x2, y2, gap_size):
+        d = abs(x1 - x2) + abs(y1 - y2)
+        for x in range(min(x1, x2) + 1, max(x1, x2)):
+            if x in xgaps:
+                d += gap_size - 1
+        for y in range(min(y1, y2) + 1, max(y1, y2)):
+            if y in ygaps:
+                d += gap_size - 1
+        return d
+
+    for gap_size in (2, 1000000):
+        sum = 0
+        for x1, y1 in gals:
+            for x2, y2 in gals:
+                sum += dist(x1, y1, x2, y2, gap_size)
+        print(sum // 2)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
