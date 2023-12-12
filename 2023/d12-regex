@@ -1,0 +1,67 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    @functools.cache
+    def combs(s):
+        if not '?' in s:
+            return [s]
+        pos = s.index('?')
+        s1 = s[:pos] + '#' + s[pos+1:]
+        s2 = s[:pos] + '.' + s[pos+1:]
+        return combs(s1) + combs(s2)
+        
+    cnt = 0
+    for l in lines:
+        patt, reg = l.split(' ')
+        reg = re.sub(r'(\d+)', r'#{\1}', reg)
+        reg = re.sub(r',', r'\.+', reg)
+        reg = re.compile(r'^\.*' + reg + r'\.*$')
+
+
+        print(patt, reg)
+        for c in combs(patt):
+            if reg.match(c):
+                cnt += 1
+
+    print(cnt)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

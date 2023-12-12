@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    # return number of solutions for this patt and this exact list of nums
+    @functools.cache
+    def subsolve(patt, nums, inside=False):
+        if len(nums) == 0:
+            return int('#' not in patt)
+        if nums[0] == 0:
+            if patt == '':
+                return int(len(nums) == 1)
+            if patt[0] == '#':
+                return 0
+            return subsolve(patt[1:], nums[1:], False)
+        # from here on we know that nums[0] > 0
+        if patt == '':
+            return 0
+        if patt[0] == '#':
+            return subsolve(patt[1:], (nums[0] - 1,) + nums[1:], True)
+        else:
+            sc = subsolve('#' + patt[1:], nums, inside)
+            if not inside:
+                sc += subsolve(patt[1:], nums, False)
+            return sc
+
+    @functools.cache
+    def solve(patterns, nums):
+        if len(patterns) == 0:
+            return int(len(nums) == 0)
+        total = 0
+        for i in range(len(nums)+1):
+            sfirst = subsolve(patterns[0], tuple(nums[:i]))
+            srest = solve(patterns[1:], nums[i:])
+            total += sfirst * srest
+        return total
+
+    for part in (1, 2):
+        cnt = 0
+        for l in lines:
+            patt, nums = l.split(' ')
+            nums = tuple(int(n) for n in nums.split(','))
+
+            if part == 2:
+                patt = '?'.join([patt] * 5)
+                nums = nums * 5
+
+            patterns = tuple(s for s in patt.split('.') if s != '')
+
+            r = solve(tuple(patterns), tuple(nums))
+            dbg(f'{l} -> {r}')
+            cnt += r
+    
+        print(cnt)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
