@@ -1,0 +1,101 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def draw(p, xm, ym):
+    xmax = max([x for x,y in p])
+    ymax = max([y for x,y in p])
+    for y in range(ymax+1):
+        if ym is not None and y == ym:
+            print('=' * (xmax+1))
+        for x in range(xmax+1):
+            if xm is not None and x == xm:
+                print('|', end='')
+            if (x,y) in p:
+                print('#', end='')
+            else:
+                print('.', end='')
+        print()
+
+def solve(pic, part):
+    xmax = max([x for x,y in pic])
+    ymax = max([y for x,y in pic])
+
+    expected_bad = part - 1 # 0 for P1, 1 for P2
+
+    for xm in range(1, xmax+1):
+        bad = 0
+        for (x,y) in pic:
+            x2 = xm - (x - xm + 1)
+            if 0 <= x2 <= xmax:
+                if (x2,y) not in pic:
+                    bad += 1
+        if bad == expected_bad:
+            return xm
+
+    for ym in range(1, ymax+1):
+        bad = 0
+        for (x,y) in pic:
+            y2 = ym - (y - ym + 1)
+            if 0 <= y2 <= ymax:
+                if (x,y2) not in pic:
+                    bad += 1
+        if bad == expected_bad:
+            return 100 * ym
+
+    assert False, f"No solution for {pic}"
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    pics = f.read().split('\n\n')
+
+    for part in (1, 2):
+        sum = 0
+        for p in pics:
+            pset = set()
+            for y,l in enumerate(p.split('\n')):
+                for x,c in enumerate(l):
+                    if c == '#':
+                        pset.add((x,y))
+            dbg(f"{pset=}")
+            sum += solve(pset, part)
+
+        print(sum)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
