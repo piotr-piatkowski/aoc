@@ -1,0 +1,113 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+
+def draw(p):
+    xmax = max([x for x,y in p])
+    ymax = max([y for x,y in p])
+    for y in range(ymax+1):
+        for x in range(xmax+1):
+            if (x,y) in p:
+                print(p[x,y], end='')
+            else:
+                print('.', end='')
+        print()
+
+
+def run(args):
+
+    f = open(args.path, "r")
+    #parts = f.read().split('\n\n')
+    lines = f.read().splitlines()
+
+    ROWS = len(lines)
+    COLS = len(lines[0])
+
+    pset = defaultdict(lambda: '.')
+    for y,l in enumerate(lines):
+        for x,c in enumerate(l):
+            if c in ('#', 'O'):
+                pset[(x,y)] = c
+
+    DIRS = {
+        'N': (0, -1),
+        'S': (0, 1),
+        'E': (1, 0),
+        'W': (-1, 0),
+    }
+
+    def shift(dirs):
+        for dir in dirs:
+            moves = True
+            while moves:
+                moves = False
+                for (x, y), c in list(pset.items()):
+                    if c == 'O':
+                        dx, dy = DIRS[dir]
+                        x1 = x + dx
+                        y1 = y + dy
+                        if (0 <= x1 < COLS and 0 <= y1 < ROWS
+                            and pset[(x1,y1)] == '.'):
+                            pset[(x1,y1)] = 'O'
+                            pset[(x,y)] = '.'
+                            moves = True
+
+    def count():
+        return sum(ROWS-y for (x,y), c in pset.items() if c == 'O')
+
+    shift('N')
+    print(count())
+
+    STATES = {}
+    step = 0
+    while True:
+        key = tuple(sorted(pset.items()))
+        if key in STATES:
+            dbg(f"found: {STATES[key]}")
+            rest = (1000000000 - STATES[key]) % (step - STATES[key])
+            shift('NWSE' * rest)
+            print(count())
+            break
+
+        STATES[key] = step
+        shift('NWSE')
+        step += 1
+        dbg(f"{step=}, {count()=}")
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
