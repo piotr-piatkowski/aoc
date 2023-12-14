@@ -43,12 +43,11 @@ def run(args):
 
     ROWS = len(lines)
     COLS = len(lines[0])
-
-    pset = defaultdict(lambda: '.')
+    
+    pset = {}
     for y,l in enumerate(lines):
         for x,c in enumerate(l):
-            if c in ('#', 'O'):
-                pset[(x,y)] = c
+            pset[(x,y)] = c
 
     DIRS = {
         'N': (0, -1),
@@ -67,8 +66,7 @@ def run(args):
                         dx, dy = DIRS[dir]
                         x1 = x + dx
                         y1 = y + dy
-                        if (0 <= x1 < COLS and 0 <= y1 < ROWS
-                            and pset[(x1,y1)] == '.'):
+                        if pset.get((x1,y1), '') == '.':
                             pset[(x1,y1)] = 'O'
                             pset[(x,y)] = '.'
                             moves = True
