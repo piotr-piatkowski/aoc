@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def hash(s):
+    h = 0
+    for c in s:
+        h += ord(c)
+        h *= 17
+        h = h % 256
+    return h
+
+def print_boxes(boxes):
+    for i, b in enumerate(boxes):
+        if b:
+            print(i, b)
+    print("------")
+
+def res(boxes):
+    r = 0
+    for i, b in enumerate(boxes):
+        for j, (k, v) in enumerate(b.items()):
+            r += (i+1) * (j+1) * int(v)
+    return r
+
+def run(args):
+
+    f = open(args.path, "r")
+    #parts = f.read().split('\n\n')
+    lines = f.read().splitlines()
+
+    # part 1
+    print(sum(hash(s) for s in lines[0].split(',')))
+
+    # part 2
+    boxes = [{} for _ in range(256)]
+    for cmd in lines[0].split(','):
+
+        if '=' in cmd:
+            lbl, val = cmd.split('=')
+        elif '-' in cmd:
+            lbl, val = cmd.split('-')
+        else:
+            assert False, cmd
+
+        bid = hash(lbl)
+        b = boxes[bid]
+        if val:
+            b[lbl] = val
+        else:
+            b.pop(lbl, None)
+        #print(bid, lbl, val)
+        #print_boxes(boxes)
+            
+    print(res(boxes))
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
