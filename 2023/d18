@@ -1,0 +1,137 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def draw(G, path):
+    xmin = min([x for x,y in G.keys()])
+    ymin = min([y for x,y in G.keys()])
+    xmax = max([x for x,y in G.keys()])
+    ymax = max([y for x,y in G.keys()])
+    for yy in range(ymin, ymax+1):
+        for xx in range(xmin, xmax+1):
+            if (xx,yy) in path:
+                print(Fore.GREEN, end='')
+            if (xx,yy) in G:
+                print(''.join(G[xx,yy]), end=' ')
+            else:
+                print('  ', end=' ')
+            print(Style.RESET_ALL, end='')
+        print()
+    print()
+
+# Order matters! Each next dir should be rotated 90 degrees clockwise
+DIRS = {
+    'U': (0, -1),
+    'R': (1, 0),
+    'D': (0, 1),
+    'L': (-1, 0),
+}
+
+def run(args):
+
+    # laziness ;-)
+    #sys.setrecursionlimit(20000)
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    inst1 = []
+    inst2 = []
+    for l in lines:
+        m = re.match(r'(.) (\d+) \(\#(......)\)', l)
+        assert m, l
+        dir = m.group(1)
+        len = int(m.group(2))
+        col = m.group(3)
+        inst1.append((dir, len))
+
+        dir = 'RDLU'[int(col[-1])]
+        len = int(col[0:5], 16)
+        inst2.append((dir, len))
+
+    def opposite(dir):
+        return 'RDLU'['LURD'.index(dir)]
+
+    def solve(inst):
+        G = {}
+
+        pos = (0,0)
+        pdir, plen = inst[-1]
+        for dir, len in inst:
+            G[pos] = opposite(pdir)+dir
+            dx, dy = DIRS[dir]
+            pos = (pos[0]+dx*len, pos[1]+dy*len)
+            pdir = dir
+
+        def count_inside(bounds):
+            inside = False
+            s = 0
+            for x, dir in sorted(bounds.items()):
+                if inside and 'L' not in dir:
+                    s += x - lastx - 1
+                if 'U' in dir:
+                    inside = not inside
+                lastx = x
+            return s
+
+        s = 0
+        bounds = {}
+        for y in sorted({y for x,y in G.keys()}):
+
+            # Count area above
+            if bounds:
+                s += (y - lasty - 1) * count_inside(bounds)
+
+            # Update bounds with current row
+            bounds.update({xx: dirs for (xx,yy), dirs in G.items() if yy == y})
+
+            # count area for this row
+            s += count_inside(bounds)
+
+            # Keep only bounds going down, change them to 'UD'
+            bounds = {x: 'UD' for x, dirs in bounds.items() if 'D' in dirs}
+
+            lasty = y
+
+        return s + sum(len for dir, len in inst)
+
+    print(solve(inst1))
+    print(solve(inst2))
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
