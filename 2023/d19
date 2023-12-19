@@ -27,11 +27,7 @@ class Range:
     @classmethod
     def full(cls):
         return cls([(1, 4001) for i in range(4)])
-    
-    @classmethod
-    def empty(cls):
-        return cls([(0, 0) for i in range(4)])
-    
+
     def split(self, cond):
         if '<' in cond:
             op = '<'
@@ -65,9 +61,6 @@ class Range:
             res *= l
         return res
     
-    def empty(self):
-        return self.count() == 0
-
     def __repr__(self):
         return f"Range({self.rr})"
 
