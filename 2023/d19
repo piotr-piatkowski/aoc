@@ -1,0 +1,169 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+class Range:
+    def __init__(self, rr):
+        self.rr = rr
+
+    @classmethod
+    def full(cls):
+        return cls([(1, 4001) for i in range(4)])
+    
+    @classmethod
+    def empty(cls):
+        return cls([(0, 0) for i in range(4)])
+    
+    def split(self, cond):
+        if '<' in cond:
+            op = '<'
+        elif '>' in cond:
+            op = '>'
+        else:
+            assert False, "invalid condition " + cond
+
+        k, v = cond.split(op)
+        v = int(v)
+        k = 'xmas'.index(k)
+
+        rr1 = deepcopy(self.rr)
+        rr2 = deepcopy(self.rr)
+        rfrom, rto = self.rr[k]
+        if op == '<':
+            rr1[k] = (rfrom, min(rto, v))
+            rr2[k] = (max(rfrom, v), rto)
+        else:
+            rr1[k] = (max(rfrom, v+1), rto)
+            rr2[k] = (rfrom, min(rto, v+1))
+        
+        return Range(rr1), Range(rr2)
+
+    def count(self):
+        res = 1
+        for r in self.rr:
+            l = r[1] - r[0]
+            if l < 0:
+                l = 0
+            res *= l
+        return res
+    
+    def empty(self):
+        return self.count() == 0
+
+    def __repr__(self):
+        return f"Range({self.rr})"
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    insts, parts = f.read().split('\n\n')
+
+    ST = {}
+
+    for inst in insts.split('\n'):
+        sname, rules = inst.split('{')
+        rules = rules.rstrip('}')
+        ST[sname] = [r.split(':') for r in rules.split(',')]
+
+    PARTS = []
+    for p in parts.split():
+        p = p[1:-1].split(',')
+        p = {k:int(v) for k,v in [r.split('=') for r in p]}
+        PARTS.append(p)
+
+    #print(ST)
+    #print(PARTS)
+
+    s = 0
+    for p in PARTS:
+        st = 'in'
+        while st not in ('A', 'R'):
+            for r in ST[st]:
+                if len(r) == 1:
+                    st = r[0]
+                    break
+                cond, st2 = r
+                if '<' in cond:
+                    k, v = cond.split('<')
+                    if p[k] < int(v):
+                        st = st2
+                        break
+                elif '>' in cond:
+                    k, v = cond.split('>')
+                    if p[k] > int(v):
+                        st = st2
+                        break
+            else:
+                assert False, "missing condition"
+        if st == 'A':
+            for k in 'xmas':
+                s += p[k]
+
+    print(s)
+
+    def match(st, vals, lvl=1):
+        if st == 'A':
+            return vals
+        if st == 'R':
+            return []
+
+        dbg(f"{'>>'*lvl} {st=} {vals=} ...")
+
+        matching = []
+        for rule in ST[st]:
+            if len(rule) == 1:
+                matching += match(rule[0], vals, lvl+1)
+            else:
+                cond, st2 = rule
+                matches = []
+                nonmatches = []
+                for val in vals:
+                    m, nom = val.split(cond)
+                    matches.append(m)
+                    nonmatches.append(nom)
+                vals = nonmatches
+                matching += match(st2, matches, lvl+1)
+        dbg(f"{'<<'*lvl}  {matching=}")
+        return matching
+
+    vals = match('in', [Range.full()])
+    print(sum(r.count() for r in vals))
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
