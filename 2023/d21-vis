@@ -25,7 +25,7 @@ def dbg(s):
     if debug:
         print(s)
 
-def draw(G, start, PL, W, H, col=True):
+def draw(G, start, PL, W, H, FILL, col=True):
     L = 2
     xmin = min([x for x,y in G])
     ymin = min([y for x,y in G])
@@ -50,6 +50,8 @@ def draw(G, start, PL, W, H, col=True):
                     print(Fore.BLUE, end='')
                 print('?' * L + ' ', end='')
             else:
+                if col and (xx,yy) in FILL:
+                    print(Fore.BLUE, end='')
                 d = PL[(xx,yy)]
                 dd = d - abs(xx-start[0]) - abs(yy-start[1])
                 print(str(dd).zfill(L) + ' ', end='')
@@ -79,7 +81,7 @@ def run(args):
     H=max([y for x,y in G])+1
 
     BG = set()
-    SS = 3
+    SS = 0
     for i in range(-SS, SS+1):
         for j in range(-SS, SS+1):
             for x, y in G:
@@ -91,9 +93,22 @@ def run(args):
             if (x+dx, y+dy) in BG:
                 NG.add_edge((x,y), (x+dx, y+dy))
     
+    def fill(graph, start, steps):
+        vis = set([start])
+        for i in range(steps):
+            nvis = set()
+            for x, y in vis:
+                for dx, dy in DIRS:
+                    if (x+dx, y+dy) in graph:
+                        nvis.add((x+dx, y+dy))
+            vis = nvis
+        return vis
+
+    FILL = fill(BG, start, 26501365 % 262)
+
     PL = dict(nx.shortest_path_length(NG, source=start))
 
-    draw(BG, start, PL, W, H, col=True)
+    draw(BG, start, PL, W, H, FILL, col=True)
 
 def main():
     script_name = os.path.basename(__file__)
