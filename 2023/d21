@@ -1,0 +1,160 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def draw(G, start, PL, W, H, col=True):
+    L = 2
+    xmin = min([x for x,y in G])
+    ymin = min([y for x,y in G])
+    xmax = max([x for x,y in G])
+    ymax = max([y for x,y in G])
+    for yy in range(ymin, ymax+1):
+        if yy % H == 0:
+            print()
+        for xx in range(xmin, xmax+1):
+            if xx % W == 0:
+                print(' ', end='')
+            if (xx,yy) == start:
+                if col:
+                    print(Fore.GREEN, end='')
+                print('S' * L + ' ', end='')
+            elif (xx,yy) not in G:
+                if col:
+                    print(Fore.RED, end='')
+                print('#' * L + ' ', end='')
+            elif (xx,yy) not in PL:
+                if col:
+                    print(Fore.BLUE, end='')
+                print('?' * L + ' ', end='')
+            else:
+                d = PL[(xx,yy)]
+                dd = d - abs(xx-start[0]) - abs(yy-start[1])
+                print(str(dd).zfill(L) + ' ', end='')
+            if col:
+                print(Style.RESET_ALL, end='')
+        print()
+    print()
+
+
+DIRS = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    G = set()
+    for y, l in enumerate(lines):
+        for x, c in enumerate(l):
+            if c == 'S':
+                start = (x,y)
+                G.add((x,y))
+            elif c == '.':
+                G.add((x,y))
+
+    W=max([x for x,y in G])+1
+    H=max([y for x,y in G])+1
+
+    CACHE = {}
+    def fill(graph, start, steps, width=W):
+        if width is not None and steps > 2*width:
+            steps = 2*width + steps % (2*width)
+        key = (start, steps)
+        if key not in CACHE:
+            vis = set([start])
+            for i in range(steps):
+                nvis = set()
+                for x, y in vis:
+                    for dx, dy in DIRS:
+                        if (x+dx, y+dy) in graph:
+                            nvis.add((x+dx, y+dy))
+                vis = nvis
+            CACHE[key] = len(vis)
+        return CACHE[key]
+
+    sx, sy = start
+
+    STARTS = {
+        (-1, 0): (W-1, sy),
+        (1, 0): (0, sy),
+        (0, -1): (sx, H-1),
+        (0, 1): (sx, 0),
+        (-1, -1): (W-1, H-1),
+        (-1, 1): (W-1, 0),
+        (1, -1): (0, H-1),
+        (1, 1): (0, 0),
+    }
+
+    CSIZE = W * 2
+
+    def calc(steps):
+        sum = 0
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                D = abs(dx) + abs(dy)
+                if D == 0:
+                    fcount = fill(G, (sx, sy), steps)
+                    sum += fcount
+                else:
+                    step1 = W // 2 + 1 if D == 1 else W + 1
+                    if step1 >= steps:
+                        continue
+                    i = 1
+                    s = step1
+                    ssx, ssy = STARTS[(dx, dy)]
+                    while True:
+                        if D == 1:
+                            fnum = 1
+                        else:
+                            fnum = i
+                        fcount = fill(G, (ssx, ssy), steps-s)
+                        sum += fcount * fnum
+                        s += W
+                        if s >= steps:
+                            break
+                        i += 1
+
+        return sum
+
+    for s in (64, 26501365):
+        print(calc(s))
+#        CACHE = {}
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
