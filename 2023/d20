@@ -1,0 +1,256 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+class Manager:
+    def __init__(self):
+        self.modules = {}
+        self.queue = []
+        self.counter = defaultdict(int)
+
+    def add_signal(self, src, dst, signal):
+        if isinstance(src, str):
+            src = self.modules[src]
+        if isinstance(dst, str):
+            dst = self.modules[dst]
+        self.counter[signal] += 1
+        self.queue.append((src, dst, signal))
+
+    def add_module(self, module):
+        self.modules[module.name] = module
+    
+    def add_connections(self, src, dst):
+        self.modules[src].add_output(self.modules[dst])
+        self.modules[dst].add_input(self.modules[src])
+
+    def reset(self):
+        for m in self.modules.values():
+            m.reset()
+        self.last_pings = {}
+
+    def results(self):
+        return self.counter[True] * self.counter[False]
+
+    def print_state(self):
+        for m in self.modules.values():
+            if type(m) == FlipFlop:
+                if m.state:
+                    print(Fore.GREEN, end='')
+                else:
+                    print(Fore.RED, end='')
+                print(m.name + ' ', end='')
+        print(Style.RESET_ALL)
+
+    def print_state2(self):
+        for m in ('bh zp ls hs fn px zx zl cl mj gp md ts fc').split():
+            m = self.modules[m]
+            if m.state:
+                print(Fore.GREEN, end='')
+            else:
+                print(Fore.RED, end='')
+            print(m.name + ' ', end='')
+        print(Style.RESET_ALL)
+        zp = self.modules['zp']
+        for m in zp.inputs:
+            print(m.name + ' ', end='')
+        print()
+
+    def print_state3(self):
+        for m in self.modules['dj'].inputs:
+            if m.state:
+                print(Fore.GREEN, end='')
+            else:
+                print(Fore.RED, end='')
+            print(m.name + ' ', end='')
+        print(Style.RESET_ALL)
+
+    def dump_tgf(self):
+        with open('dump.tgf', 'w') as f:
+            for m in self.modules.values():
+                f.write(f'{m.name} {m.fname()}\n')
+            f.write('#\n')
+            for m in self.modules.values():
+                for dst in m.outputs:
+                    f.write(f'{m.name} {dst.name}\n')
+
+    def run(self, gstep):
+        KEYS = 'zp dj nx bz'.split()
+        self.add_signal(None, 'broadcaster', False)
+        for k in KEYS:
+            self.modules[k].ping_steps = []
+        self.step_count = 0
+        self.global_step = gstep
+        while self.queue:
+            src, dst, signal = self.queue.pop(0)
+            if debug:
+                if signal:
+                    dbg_sig = '-high->'
+                else:
+                    dbg_sig = '-low->'
+                dbg(f'{src.name if src else "None"} {dbg_sig} {dst.name}')
+            dst.process(src, signal)
+            self.step_count += 1
+        for k in KEYS:
+            m = self.modules[k]
+            if m.ping_steps:
+                if k not in self.last_pings:
+                    print(f"{m.fname()} PINGED first time at {gstep}")
+                else:
+                    delta = gstep - self.last_pings[k]
+                    print(f"{m.fname()} PINGED at {gstep} (delta {delta})")
+                self.last_pings[k] = gstep
+
+class Module:
+    def __init__(self, name, manager):
+        self.name = name
+        self.outputs = []
+        self.inputs = []
+        self.manager = manager
+    
+    def reset(self):
+        pass
+
+    def fname(self):
+        raise NotImplementedError
+
+    def add_input(self, m):
+        self.inputs.append(m)
+
+    def add_output(self, m):
+        self.outputs.append(m)
+
+    def process(self, src, impulse):
+        raise NotImplementedError
+    
+class Broadcaster(Module):
+    def process(self, src, impulse):
+        for m in self.outputs:
+            self.manager.add_signal(self, m, impulse)
+
+    def fname(self):
+        return 'BB'
+
+class Conjunction(Module):
+    def reset(self):
+        self.inp_states = {k: False for k in self.inputs}
+        self.state = True
+        self.ping_steps = []
+
+    def process(self, src, impulse):
+        self.inp_states[src] = impulse
+        out = not all(self.inp_states.values())
+        if not out:
+            self.ping_steps.append(self.manager.step_count)
+        self.state = out
+        for m in self.outputs:
+            self.manager.add_signal(self, m, out)
+
+    def fname(self):
+        return '&' + self.name
+
+class FlipFlop(Module):
+    state: False
+
+    def reset(self):
+        self.state = False
+
+    def process(self, src, impulse):
+        if not impulse:
+            self.state = not self.state
+            for m in self.outputs:
+                self.manager.add_signal(self, m, self.state)
+
+    def fname(self):
+        return '%' + self.name
+
+class Output(Module):
+    def process(self, src, impulse):
+        if not impulse:
+            print("!!!!")
+            exit(0)
+
+    def fname(self):
+        return '!' + self.name
+
+
+TYPES = {
+    '&': Conjunction,
+    '%': FlipFlop,
+}
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    mgr = Manager()
+
+    conns = []
+    for l in lines:
+        src, dsts = l.split(' -> ')
+        if src == 'broadcaster':
+            stype = Broadcaster
+            sname = src
+        else:
+            stype = TYPES[src[0]]
+            sname = src[1:]
+        mgr.add_module(stype(sname, mgr))
+        for dst in dsts.split(', '):
+            conns.append((sname, dst))
+
+    for src, dst in conns:
+        if dst not in mgr.modules:
+            mgr.add_module(Output(dst, mgr))
+        mgr.add_connections(src, dst)
+
+    mgr.reset()
+    for i in range(1000):
+        mgr.run(i)
+    print(mgr.results())
+
+    mgr.reset()
+    i = 0
+    while True:
+        i += 1
+        #print(i)
+        mgr.run(i)
+        if args.debug:
+            mgr.print_state2()
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
