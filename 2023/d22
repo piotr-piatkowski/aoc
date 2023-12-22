@@ -1,0 +1,158 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def points(block, with_z=True):
+    f, t = block
+    for x in range(f[0], t[0]+1):
+        for y in range(f[1], t[1]+1):
+            if with_z:
+                for z in range(f[2], t[2]+1):
+                    yield (x,y,z)
+            else:
+                yield (x,y)
+
+def run(args):
+
+    #sys.setrecursionlimit(2000)
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    G = {}
+    BR = {}
+    for (i, l) in enumerate(lines):
+        b = tuple(tuple(int(v) for v in ft.split(','))
+                  for ft in l.split('~'))
+        BR[i]=b
+        for x, y, z in points(b):
+            G[(x,y,z)] = i
+
+
+    def fall_down(ii):
+        b = BR[ii]
+
+        zmin = min(b[0][2], b[1][2])
+
+        # Find max number of steps
+        s = 0
+        while zmin - s > 1:
+            free = True
+            for x, y, z in points(b):
+                np = (x,y,z-(s+1))
+                if np in G and G[np] != ii:
+                    free = False
+                    break
+            if not free:
+                break
+            s += 1
+        
+        if s > 0:
+            dbg(f"Moving {ii} down by {s}")
+
+            # Remove brick from G
+            for x, y, z in points(b):
+                G.pop((x,y,z))
+
+            # Move brick
+            BR[ii] = ((b[0][0], b[0][1], b[0][2]-s),
+                    (b[1][0], b[1][1], b[1][2]-s))
+
+            # ...and put it back to G
+            for x, y, z in points(BR[ii]):
+                G[(x,y,z)] = ii
+
+    # Check if i is supporting j
+    def is_supporting(i, j):
+        b1 = BR[i]
+        b2 = BR[j]
+        zmax1 = max(b1[0][2], b1[1][2])
+        zmin2 = min(b2[0][2], b2[1][2])
+        if zmax1 == zmin2 - 1:
+            for x, y in points(b1, with_z=False):
+                if G.get((x,y,zmin2), None) == j:
+                    dbg(f"Support {i} -> {j}")
+                    return True
+        return False
+
+    # Fall down starting from lowest one to the highest
+    for i in sorted(BR.keys(), key=lambda i: BR[i][1][2]):
+        fall_down(i)
+
+    # Prepare dictionary of all bricks supporting given brick
+    SUPBY = defaultdict(set)
+    for i in BR.keys():
+        for j in BR.keys():
+            if is_supporting(j, i):
+                SUPBY[i].add(j)
+
+    # Given set of bricks return bricks that would fall if these are removed
+    @functools.cache
+    def would_fall(s):
+        if debug:
+            dbg(f"<<<< checking {s}")
+        ss = set(s)
+        for j in BR.keys():
+            # Check if j is supported by any of bricks in s
+            # and if removing s would leave it without support
+            if (j not in ss and (ss & SUPBY[j]) and len(SUPBY[j] - ss) == 0):
+                # If so, then add this brick and all bricks that would fall
+                ss.add(j)
+        if ss > s:
+            ss |= would_fall(frozenset(ss))
+        res = ss - s
+        if debug:
+            dbg(f">>>> {s} -> {res}")
+        return res
+
+    c = 0
+    s = 0
+    for i in BR.keys():
+        f = would_fall(frozenset([i]))
+        if len(f) > 0:
+            s += len(f)
+        else:
+            c += 1
+    print(c)
+    print(s)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?',
+                         default=f'/home/kompas/git/aoc/2023/s22',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
