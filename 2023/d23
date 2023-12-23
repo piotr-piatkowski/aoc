@@ -1,0 +1,154 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+DIRS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+def run(args):
+
+    #sys.setrecursionlimit(2000)
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    W = len(lines[0])
+    H = len(lines)
+
+    IN = {}
+    for y, l in enumerate(lines):
+        for x, c in enumerate(l):
+            if (x, y) == (1, 0):
+                IN[x,y] = 'S'
+            elif (x, y) == (W-2, H-1):
+                IN[x,y] = 'E'
+            elif c in '.>v':
+                IN[x,y] = '.'
+
+    print(IN)
+
+    crossings = {
+        (1, 0): [(1,1)],
+        (W-2, H-1): [(W-2, H-2)],
+    }
+    for (x, y), c in IN.items():
+        nbrs = []
+        for dx, dy in DIRS:
+            xx = x + dx
+            yy = y + dy
+            if (xx, yy) in IN:
+                nbrs.append((xx, yy))
+        if len(nbrs) > 2:
+            crossings[x,y] = nbrs
+
+    G = nx.Graph()
+
+    for (x, y), nbrs in crossings.items():
+        for (xx, yy) in nbrs:
+            VIS = set([(x, y)])
+            while (xx, yy) not in crossings:
+                VIS.add((xx, yy))
+                for dx, dy in DIRS:
+                    xxx = xx + dx
+                    yyy = yy + dy
+                    if (xxx, yyy) in IN and (xxx, yyy) not in VIS:
+                        xx = xxx
+                        yy = yyy
+                        break
+            dbg(f"{(x, y)} -> {(xx, yy)} {len(VIS)}")
+            G.add_edge((x, y), (xx, yy), weight=len(VIS))
+
+    print(G)
+
+
+    gnums = {k: f"N{i}" for i, k in enumerate(G.nodes())}
+    gnums[(1, 0)] = "START"
+    gnums[(W-2, H-1)] = "END"
+    print(gnums)
+
+    with open("graph.tgf", "w") as f:
+        for n in G.nodes():
+            f.write(f"{gnums[n]} ({n[0]},{n[1]})\n")
+        f.write("#\n")
+        for e in G.edges():
+            e1, e2 = e
+            f.write(f"{gnums[e[0]]} {gnums[e[1]]} {G[e1][e2]['weight']}\n")
+
+    @functools.cache
+    def longest(start, end, visited):
+        if start == end:
+            return 0
+        lmax = -1
+        for nbr in G[start]:
+            if nbr in visited:
+                continue
+            #print(f"{start} -> {nbr}")
+            l1 = G[start][nbr]['weight']
+            l2 = longest(nbr, end, frozenset(visited | {nbr}))
+            if l2 >= 0:
+                lmax = max(lmax, l1 + l2)
+        return lmax
+
+    start = (1, 0)
+    end = (W-2, H-1)
+
+    print(longest(start, end, frozenset([start])))
+
+        # l = -1
+        # for nbr in G[start]:
+        #     ll = longest(G, nbr, end)
+        #     if ll >= 0:
+        #         l = max(l, ll + G[start][nbr]['weight'])
+        # return l
+
+    return
+        
+    ll = 0
+    for p in nx.all_simple_paths(G, (1, 0), (W-2, H-1)):
+        print(p)
+        l = 0
+        s = p[0]
+        for d in p[1:]:
+            l += G[s][d]['weight']
+            s = d
+        ll = max(ll, l)
+    print(ll)
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?',
+                         default=f'/home/kompas/git/aoc/2023/s22',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
