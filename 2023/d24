@@ -1,0 +1,167 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve, Eq, nsolve
+from sympy.solvers.solveset import solveset
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s, end='\n'):
+    if debug:
+        print(s, end=end)
+
+DIRS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+def run(args):
+
+    #sys.setrecursionlimit(2000)
+
+    f = open(args.path, "r")
+    lines = f.read().replace(' ', '').splitlines()
+
+    TMIN, TMAX = (int(x) for x in lines.pop(0).split(','))
+
+    HS = []
+    for l in lines:
+        pos, v = l.split('@')
+        HS.append((
+            tuple(int(v) for v in pos.split(',')),
+            tuple(int(v) for v in v.split(','))
+        ))
+    
+    def get_eqs(h, tsym):
+        (x0, y0, z0), (dx, dy, dz) = h
+        from sympy.abc import x, y, z, t
+        return (
+            Eq(x, x0 + dx * tsym),
+            Eq(y, y0 + dy * tsym),
+            Eq(z, z0 + dz * tsym)
+        )
+        return (
+            Eq(x, x0 + dx * tsym),
+            Eq(y, y0 + dy * tsym)
+        )
+        a = dy / dx
+        b = y0 - a * x0
+        #return a, b
+        return (EQq)
+
+    def is_crossing(h1, h2):
+        dbg(f"Checking {h1} and {h2}... ")
+        (x01, y01, z01), (dx1, dy1, dz1) = h1
+        (x02, y02, z02), (dx2, dy2, dz2) = h2
+        x, y, t1, t2 = symbols('x y t1 t2')
+        eqs = [
+            Eq(x01 + dx1 * t1, x),
+            Eq(y01 + dy1 * t1, y),
+            Eq(x01 + dx1 * t1, x02 + dx2 * t2),
+            Eq(y01 + dy1 * t1, y02 + dy2 * t2),
+        ]
+        r = solve(eqs, dict = True)
+        dbg(f"{r=}")
+        for rr in r:
+            if rr[t1] < 0 or rr[t2] < 0:
+                if debug:
+                    dbg(f"Crossing in the past at {rr}")
+                continue
+            elif (rr[x] >= TMIN and rr[x] <= TMAX
+                and rr[y] >= TMIN and rr[y] <= TMAX):
+                if debug:
+                    dbg(f"Crossing at {rr}")
+                return True
+            else:
+                if debug:
+                    dbg(f"Crossing outside at {rr}")
+        dbg("No crossing")
+        return False
+
+    # print (TMIN, TMAX)
+    # print (HS)
+    
+    c = 0
+    i = 0
+    for i in range(len(HS)):
+        (x01, y01, z01), (dx1, dy1, dz1) = HS[i]
+        x, y, t1, t2 = symbols('x y t1 t2')
+        eqs1 = [
+            Eq(x01 + dx1 * t1, x),
+            Eq(y01 + dy1 * t1, y),
+        ]
+        for j in range(i+1, len(HS)):
+            dbg(f"Checking {HS[i]} and {HS[j]}")
+            (x02, y02, z02), (dx2, dy2, dz2) = HS[j]
+
+            eqs2 = [
+                Eq(x02 + dx2 * t2, x),
+                Eq(y02 + dy2 * t2, y),
+            ]
+
+            r = solve(eqs1 + eqs2, dict = True)
+            if not r:
+                dbg("No crossing")
+                continue
+            assert len(r) == 1
+            r = r[0]
+            if r[t1] < 0 or r[t2] < 0:
+                if debug:
+                    dbg(f"Crossing in the past at {r}")
+            elif (TMAX >= r[x] >= TMIN and TMAX >= r[y] >= TMIN):
+                if debug:
+                    dbg(f"Crossing at {r}")
+                c += 1
+            else:
+                if debug:
+                    dbg(f"Crossing outside at {r}")
+    print(c)
+
+    sx0, sy0, sz0, sdx, sdy, sdz = symbols('sx0 sy0 sz0 sdx sdy sdz')
+
+    eqs = []
+    for i, h in enumerate(HS[:10]):
+        (x0, y0, z0), (dx, dy, dz) = h
+
+        ti = symbols(f't{i}')
+        eqs += [
+            Eq(sx0 + sdx * ti, x0 + dx * ti),
+            Eq(sy0 + sdy * ti, y0 + dy * ti),
+            Eq(sz0 + sdz * ti, z0 + dz * ti),
+        ]
+
+    r = solve(eqs)
+    assert len(r) == 1
+    r = r[0]
+    print(r[sx0] + r[sy0] + r[sz0])
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?',
+                         default=f'/home/kompas/git/aoc/2023/s22',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
