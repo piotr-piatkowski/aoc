@@ -1,0 +1,107 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s):
+    if debug:
+        print(s)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    nodes = set()
+    edges = set()
+    for l in lines:
+        parts = l.replace(':', '').split()
+        src = parts.pop(0)
+        nodes.add(src)
+        for p in parts:
+            edges.add((src, p))
+            nodes.add(p)
+
+    nodes = list(nodes)
+    best = 0
+    for i in range(1, len(nodes)-1):
+        s1 = set(nodes[i:])
+        s2 = set(nodes[:i])
+        c = 0
+        for u, v in edges:
+            if (u in s1 and v in s2) or (u in s2 and v in s1):
+                c += 1
+        print(f"{len(s1)=} {len(s2)=} {c=}")
+        assert c >= 3
+        if c == 3:
+            best = max(best, len(s1) * len(s2))
+    print(best)
+
+    # G = nx.Graph()
+
+    # for l in lines:
+    #     parts = l.replace(':', '').split()
+    #     src = parts.pop(0)
+    #     for p in parts:
+    #         G.add_edge(src, p)
+
+    # with open('25.tgf', 'w') as f:
+    #     for n in G.nodes:
+    #         f.write(f"{n} {n}\n")
+    #     f.write('#\n')
+    #     for u, v in G.edges:
+    #         f.write(f"{u} {v}\n")
+    # print(G)
+
+    # # Here we open 25.tgf in yEd and see which edges must be removed,
+    # # to divide the graph into two parts - then we put them below:
+
+    # TO_REMOVE = ( ('vcq', 'lxb'), ('znk', 'mmr'), ('rnx', 'ddj') )
+
+    # for u, v in TO_REMOVE:
+    #     G.remove_edge(u, v)
+
+    # res = 1
+    # for n in TO_REMOVE[0]:
+    #     s = set()
+    #     for u, v in nx.edge_dfs(G, n):
+    #         s.add(u)
+    #         s.add(v)
+    #     res *= len(s)
+    
+    # print(res)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()

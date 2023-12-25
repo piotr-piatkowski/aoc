@@ -1,0 +1,83 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import re
+import argparse
+import itertools
+import collections
+import functools
+import math
+import time
+import networkx as nx
+from collections import defaultdict
+from queue import PriorityQueue
+from copy import deepcopy
+from sympy import symbols, solve
+from math import floor, ceil
+from functools import cmp_to_key
+from colorama import Fore, Back, Style
+
+debug = False
+# For pypy
+functools.cache = functools.lru_cache(maxsize=None)
+
+def dbg(s, end='\n'):
+    if debug:
+        print(s, end=end)
+
+def run(args):
+
+    f = open(args.path, "r")
+    lines = f.read().splitlines()
+
+    G = nx.Graph()
+
+    for l in lines:
+        parts = l.replace(':', '').split()
+        src = parts.pop(0)
+        for p in parts:
+            G.add_edge(src, p)
+    
+    dbg("Getting all shortest paths...", end='')
+    all_paths = nx.shortest_path(G)
+
+    cnt = collections.Counter()
+    for pp in all_paths.values():
+        for p in pp.values():
+            if len(p) > 1:
+                cnt.update([tuple(sorted(edge)) for edge in zip(p, p[1:])])
+
+    to_remove = [k for k, v in cnt.most_common(3)]
+
+    dbg(f"{to_remove=}")
+
+    for u, v in to_remove:
+        G.remove_edge(u, v)
+
+    res = 1
+    for n in to_remove[0]:
+        s = set()
+        for u, v in nx.edge_dfs(G, n):
+            s.add(u)
+            s.add(v)
+        res *= len(s)
+    
+    print(res)
+
+
+def main():
+    script_name = os.path.basename(__file__)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--debug', action='store_true',
+            help='Enable debug')
+    parser.add_argument('path', nargs='?', default=f'input-{script_name}.txt',
+            help='Path to the input file')
+
+    args = parser.parse_args()
+    global debug
+    debug = args.debug
+    run(args)
+
+main()
