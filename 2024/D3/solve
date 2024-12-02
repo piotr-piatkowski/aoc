@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+
+def run(args):
+
+    for nums in read_ints(args):
+        dbg(nums)
+        ...
+
+
+main(run)

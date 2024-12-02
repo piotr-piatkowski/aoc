@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+
+def is_safe(nums):
+    if nums[0] == nums[1]:
+        return False
+    dir = 'A' if nums[0] < nums[1] else 'D'
+    for a, b in zip(nums, nums[1:]):
+        if abs(a-b) > 3:
+            return False
+        if dir == 'A' and a >= b:
+            return False
+        if dir == 'D' and a <= b:
+            return False
+    return True
+
+def run(args):
+
+    safe = 0
+    safe_damp = 0
+
+    for nums in read_ints(args):
+        dbg(nums)
+        any_safe = False
+        for i in range(0, len(nums)):
+            if is_safe(nums[:i] + nums[i+1:]):
+                any_safe = True
+                break
+        if is_safe(nums):
+            safe += 1
+            safe_damp += 1
+        elif any_safe:
+            safe_damp += 1
+
+    print(safe)
+    print(safe_damp)
+
+main(run)

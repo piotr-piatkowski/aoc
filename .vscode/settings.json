@@ -1,0 +1,22 @@
+{
+    "editor.rulers": [
+        {
+            "column": 79
+        }
+    ],
+    "editor.occurrencesHighlight": "off",
+    "diffEditor.experimental.showMoves": true,
+    "files.insertFinalNewline": true,
+    "rewrap.autoWrap.enabled": true,
+    "rewrap.wrappingColumn": 79,
+    "[python]": {
+        "editor.formatOnType": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+    },
+    "python.defaultInterpreterPath": "/usr/bin/python3",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/lib",
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "terminal.integrated.lineHeight": 1.2,
+}

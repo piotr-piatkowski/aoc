@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+
+def run(args):
+
+    ll, rr = read_columns(args, int)
+    ll.sort()
+    rr.sort()
+
+    dist = 0
+    for a, b in zip(ll, rr):
+        dist += abs(a-b)
+    print(dist)
+
+    counts = Counter(rr)
+
+    sscore = 0
+    for a in ll:
+        sscore += a * counts[a]
+    print(sscore)
+
+main(run)
