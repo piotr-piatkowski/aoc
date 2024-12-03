@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+
+import re
+from aoc.tools import *
+
+def run(args):
+
+    data = read_all(args)
+
+    class State:
+        s1: int = 0
+        s2: int = 0
+        enabled: bool = True
+
+        def mul(self, a: int, b: int):
+            self.s1 += a * b
+            if self.enabled:
+                self.s2 += a * b
+
+        def do(self):
+            self.enabled = True
+
+        def dont(self):
+            self.enabled = False
+
+        def print(self):
+            print(self.s1)
+            print(self.s2)
+
+    st = State()
+
+    for r in re.findall(r"""
+                        mul\(\d+,\d+\) |
+                        do\(\) |
+                        don't\(\)
+                        """, data, re.VERBOSE):
+        command = "st." + r.replace("'", "")
+        eval(command)
+
+    st.print()
+
+main(run)
