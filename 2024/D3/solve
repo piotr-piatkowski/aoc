@@ -1,12 +1,24 @@
 #!/usr/bin/python3
 
+import re
 from aoc.tools import *
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    data = read_all(args)
+
+    for part in (1, 2):
+        s = 0
+        doing = True
+        for r in re.findall(r"(mul)\((\d+),(\d+)\)|(do|don't)\(\)", data):
+            if r[0] == 'mul':
+                if doing or part == 1:
+                    s += int(r[1]) * int(r[2])
+            elif r[3] == 'do':
+                doing = True
+            elif r[3] == "don't":
+                doing = False
+        print(s)
 
 
 main(run)
