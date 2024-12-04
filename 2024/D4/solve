@@ -7,9 +7,9 @@ def run(args):
     lines = read_lines(args)
 
     grid = defaultdict(str)
-    for i, line in enumerate(lines):
-        for j, c in enumerate(line):
-            grid[(i, j)] = c
+    for y, line in enumerate(lines):
+        for x, c in enumerate(line):
+            grid[x,y] = c
 
     WORD='XMAS'
 
