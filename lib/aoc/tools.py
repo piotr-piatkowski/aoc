@@ -3,6 +3,7 @@ import sys
 import re
 import argparse
 import inspect
+import itertools
 
 from collections import defaultdict, Counter
 from copy import deepcopy
@@ -34,6 +35,13 @@ def read_split(args, conv):
             l.append([conv(x) for x in line.split()])
     return l
 
+def read_lines(args):
+    with open(args.path, "r") as f:
+        l = []
+        for line in f:
+            l.append(line.strip())
+    return l
+
 def transpose(l):
     return list(map(list, zip(*l)))
 
@@ -44,6 +52,11 @@ def read_all(args):
     with open(args.path, "r") as f:
         return f.read().strip()
 
+ALL_DIRS = {(dx, dy) 
+            for dx in (-1, 0, 1) 
+            for dy in (-1, 0, 1) 
+            if (dx, dy) != (0, 0)}
+HV_DIRS = {(-1, 0), (1, 0), (0, -1), (0, 1)}
 
 debug = False
 

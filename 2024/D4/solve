@@ -4,9 +4,39 @@ from aoc.tools import *
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    lines = read_lines(args)
 
+    grid = defaultdict(str)
+    for i, line in enumerate(lines):
+        for j, c in enumerate(line):
+            grid[(i, j)] = c
+
+    WORD='XMAS'
+
+    cnt1 = 0
+    cnt2 = 0
+    for x, y in list(grid.keys()):
+        for dx, dy in ALL_DIRS:
+            if dx == 0 and dy == 0:
+                continue
+            if all(
+                grid[x+i*dx, y+i*dy] == ch 
+                for i, ch in enumerate(WORD)
+            ):
+                cnt1 += 1
+        w1 = (
+            grid[x-1,y+1] +
+            grid[x,y] +
+            grid[x+1,y-1]
+        )
+        w2 = (
+            grid[x-1,y-1] +
+            grid[x,y] +
+            grid[x+1,y+1]
+        )
+        if w1 in ('MAS', 'SAM') and w2 in ('MAS', 'SAM'):
+            cnt2 += 1
+    print(cnt1)
+    print(cnt2)
 
 main(run)
