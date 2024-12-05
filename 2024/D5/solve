@@ -1,12 +1,52 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
+from functools import cmp_to_key
+
+def top_sort(order, pages):
+    def ctk(a, b):
+        if a in order[b]:
+            return -1
+        if b in order[a]:
+            return 1
+        return 0
+    pages.sort(key=cmp_to_key(ctk))
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    ic.disable()
 
+    data = read_all(args)
+    rules, page_nums = data.split('\n\n')
+    rules = rules.split('\n')
+
+    order = defaultdict(list)
+    for r in rules:
+        before, after = map(int, r.split('|'))
+        order[before].append(after)
+
+    s1 = 0
+    s2 = 0
+    for update in page_nums.split('\n'):
+        pages = [int(p) for p in update.split(',')]
+        ic(pages)
+        correct = True
+        for i, p in enumerate(pages):
+            for p2 in pages[i+1:]:
+                if p in order[p2]:
+                    ic(p, p2, False)
+                    correct = False
+                    break
+                else:
+                    ic(p, p2, True)
+        ic(correct) 
+        if correct:
+            s1 += pages[len(pages)//2]
+        else:
+            top_sort(order, pages)
+            s2 += pages[len(pages)//2]
+
+    print(s1)
+    print(s2)
 
 main(run)
