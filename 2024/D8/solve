@@ -1,12 +1,35 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
+from itertools import combinations, permutations
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    ants = defaultdict(list)
 
+    for y, line in enumerate(read_lines(args)):
+        for x, c in enumerate(line):
+            if c != '.':
+                ants[c].append((x,y))
+            W = x+1
+        H = y+1
+
+    anodes1 = set()
+    anodes2 = set()
+    for c, pos in ants.items():
+        for p1, p2 in permutations(pos, 2):
+            dx = p2[0] - p1[0]
+            dy = p2[1] - p1[1]
+            p = p2
+            n = 0
+            while 0 <= p[1] < H and 0 <= p[0] < W:
+                if n == 1:
+                    anodes1.add(p)
+                anodes2.add(p)
+                p = (p[0] + dx, p[1] + dy)
+                n += 1
+
+    print(len(anodes1))
+    print(len(anodes2))
 
 main(run)
