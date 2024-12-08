@@ -1,12 +1,34 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
+from itertools import product
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    lines = read_lines(args)
+    
+    for part in (1, 2):
+        sum = 0
+        if part == 1:
+            ops_set = ['+', '*']
+        else:
+            ops_set = ['+', '*', '||']
+        for l in lines:
+            nums = list(map(int, l.replace(':', '').split()))
+            res = nums.pop(0)
+            for ops in product(ops_set, repeat=len(nums)-1):
+                s = nums[0]
+                for op, n in zip(ops, nums[1:]):
+                    if op == '+':
+                        s += n
+                    elif op == '*':
+                        s *= n
+                    else:
+                        s = int(str(s) + str(n))
+                if s == res:
+                    sum += s
+                    break
 
+        print(sum)
 
 main(run)
