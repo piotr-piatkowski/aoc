@@ -1,12 +1,109 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
+from dataclasses import dataclass
+
+@dataclass
+class Slot:
+    id: int
+    size: int
+
+    @property
+    def free(self):
+        return self.id < 0
+
+    def __repr__(self) -> str:
+        return f'({"." if self.free else self.id})x{self.size}'
+
+
+class FreeSlot(Slot):
+    def __init__(self, size):
+        super().__init__(-1, size)
+
+
+def display(l: list[Slot], prefix=''):
+    print(prefix, end='')
+    for slot in l:
+        if slot.free:
+            print('.' * slot.size, end='')
+        else:
+            print(str(slot.id) * slot.size, end='')
+    print()
+
+def checksum(l: list[Slot]) -> int:
+    p = 0
+    i = 0
+    for slot in l:
+        if not slot.free:
+            for j in range(slot.size):
+                p += slot.id * (i+j)
+        i += slot.size
+    return p
+
 
 def run(args):
 
-    for nums in read_ints(args):
-        dbg(nums)
-        ...
+    digs = list(map(int, read_all(args).strip()))
 
+    slots = []
+
+    for i, size in enumerate(digs):
+        if i % 2 == 0:
+            slots.append(Slot(i // 2, size))
+        else:
+            slots.append(FreeSlot(size))
+
+    # PART 1
+    org_slots = deepcopy(slots)
+
+    cur_file = None
+    new_slots = []
+    while slots:
+        slot = slots.pop(0)
+        if not slot.free:
+            new_slots.append(slot)
+        else:
+            try:
+                free_size = slot.size
+                while free_size > 0:
+                    while not cur_file or cur_file.free:
+                        cur_file = slots.pop()
+                    if cur_file.size <= free_size:
+                        new_slots.append(cur_file)
+                        free_size -= cur_file.size
+                        cur_file = None
+                    else:
+                        new_slots.append(Slot(cur_file.id, free_size))
+                        cur_file.size -= free_size
+                        free_size = 0
+            except IndexError: # pop from empty list
+                break
+    if cur_file:
+        new_slots.append(cur_file)
+
+    print(checksum(new_slots))
+
+    # PART 2
+
+    slots = org_slots
+
+    i = len(slots)-1
+    while i > 0:
+        if not slots[i].free:
+            file = slots[i]
+            # Find first free space long enough to fit the file
+            for j in range(0, i):
+                if slots[j].free and slots[j].size >= file.size:
+                    if slots[j].size > file.size:
+                        slots[j].size -= file.size
+                        slots.insert(j, file)
+                        i += 1
+                    else:
+                        slots[j] = file
+                    slots[i] = FreeSlot(file.size)
+                    break
+        i -= 1
+
+    print(checksum(slots))
 
 main(run)
