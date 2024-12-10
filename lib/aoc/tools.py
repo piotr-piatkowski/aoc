@@ -58,6 +58,9 @@ ALL_DIRS = {(dx, dy)
             if (dx, dy) != (0, 0)}
 HV_DIRS = {(-1, 0), (1, 0), (0, -1), (0, 1)}
 
+C_ALL_DIRS = [complex(dx, dy) for dx, dy in ALL_DIRS]
+C_HV_DIRS = [complex(dx, dy) for dx, dy in HV_DIRS]
+
 debug = False
 
 def dbg(s):

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
-from dataclasses import dataclass
+from itertools import chain
 
 def display(w, m):
     W = max(x for x, y in m) + 1
@@ -19,29 +19,27 @@ def run(args):
     M = dict()
     for y, line in enumerate(read_lines(args)):
         for x, c in enumerate(line):
-            M[x,y] = int(c) if c.isdigit() else -1
+            M[complex(x,y)] = int(c) if c.isdigit() else -1
 
     W = defaultdict(list)
 
     for d in reversed(range(0, 10)):
-        for (x,y), v in M.items():
+        for p, v in M.items():
             if v == d:
                 if d == 9:
-                    W[x,y] = [(x,y)]
+                    W[p] = [p]
                 else:
-                    s = []
-                    for dx, dy in HV_DIRS:
-                        p2 = (x+dx, y+dy)
-                        if p2 in M and M[p2] == d+1:
-                            s += W[p2]
-                    W[x,y] = s
+                    W[p] = list(chain.from_iterable(
+                        W[p+dir] for dir in C_HV_DIRS
+                        if M.get(p+dir, -1) == d+1
+                    ))
 
     p1 = 0
     p2 = 0
-    for (x,y), v in W.items():
-        if M[x,y] == 0:
-            p1 += len(W[x,y])
-            p2 += len(set(W[x,y]))
+    for p, v in W.items():
+        if M[p] == 0:
+            p1 += len(v)
+            p2 += len(set(v))
 
     print(p1)
     print(p2)
