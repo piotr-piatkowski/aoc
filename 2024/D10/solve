@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from dataclasses import dataclass
+
+def display(w, m):
+    W = max(x for x, y in m) + 1
+    H = max(y for x, y in m) + 1
+    for y in range(H):
+        for x in range(W):
+            if (x,y) in w:
+                print(f"{m[x,y]}/{len(set(w[x,y])):02d}", end=' ')
+            else:
+                print('   .', end=' ')
+        print()
+
+def run(args):
+
+    M = dict()
+    for y, line in enumerate(read_lines(args)):
+        for x, c in enumerate(line):
+            M[x,y] = int(c) if c.isdigit() else -1
+
+    W = defaultdict(list)
+
+    for d in reversed(range(0, 10)):
+        for (x,y), v in M.items():
+            if v == d:
+                if d == 9:
+                    W[x,y] = [(x,y)]
+                else:
+                    s = []
+                    for dx, dy in HV_DIRS:
+                        p2 = (x+dx, y+dy)
+                        if p2 in M and M[p2] == d+1:
+                            s += W[p2]
+                    W[x,y] = s
+
+    p1 = 0
+    p2 = 0
+    for (x,y), v in W.items():
+        if M[x,y] == 0:
+            p1 += len(W[x,y])
+            p2 += len(set(W[x,y]))
+
+    print(p1)
+    print(p2)
+
+main(run)
