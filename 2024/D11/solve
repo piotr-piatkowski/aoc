@@ -26,7 +26,7 @@ def solve(stones, n):
 
 def run(args):
 
-    stones = tuple(map(int, read_all(args).strip().split()))
+    stones = tuple(read_ints(args)[0])
 
     for n in (25, 75):
         print(solve(stones, n))
