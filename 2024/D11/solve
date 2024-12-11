@@ -1,0 +1,34 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import chain
+from functools import cache
+
+def conv(stones):
+    new_stones = []
+    for st in stones:
+        if st == 0:
+            new_stones.append(1)
+        elif len(str(st)) % 2 == 0:
+            n = len(str(st))
+            new_stones.append(int(str(st)[:n//2]))
+            new_stones.append(int(str(st)[n//2:]))
+        else:
+            new_stones.append(st*2024)
+    return new_stones
+
+@cache
+def solve(stones, n):
+    if n == 0:
+        return len(stones)
+    else:
+        return sum(solve(tuple([st]), n-1) for st in conv(stones))
+
+def run(args):
+
+    stones = tuple(map(int, read_all(args).strip().split()))
+
+    for n in (25, 75):
+        print(solve(stones, n))
+
+main(run)
