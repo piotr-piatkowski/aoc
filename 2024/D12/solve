@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import chain
+from functools import cache
+
+def reg_from_point(M, c, f=None):
+    if c not in M:
+        return set()
+    if f is None:
+        f = M[c]
+    if M[c] != f:
+        return set()
+    M.pop(c)
+    R = {c}
+    for dir in C_HV_DIRS:
+        R |= reg_from_point(M, c+dir, f)
+    return R
+
+def per(r):
+    p = 0
+    for c in r:
+        for dir in C_HV_DIRS:
+            if c+dir not in r:
+                p += 1
+    return p
+
+def sides(r):
+
+    corners = set()
+    for c in r:
+        for dir in C_CORNER_DIRS_ROUND:
+            corners.add(c+dir/2)
+
+    sides = 0
+    for c in corners:
+        blocks = [c + dir/2 for dir in C_CORNER_DIRS_ROUND]
+        s = ''.join('1' if b in r else '0' for b in blocks)
+        if s in ('1010', '0101'):
+            sides += 2
+        else:
+            sides += s.count('1') % 2
+    return sides
+
+def run(args):
+
+    M = {}
+
+    for y, line in enumerate(read_lines(args)):
+        for x, c in enumerate(line):
+            M[complex(x,y)] = c
+            W = x+1
+        H = y+1
+
+    regs = []
+    M2 = deepcopy(M)
+
+    while M2:
+        c = next(iter(M2))
+        regs.append(reg_from_point(M2, c))
+
+    p1 = 0
+    p2 = 0
+    for r in regs:
+        p1 += len(r) * per(r)
+        p2 += len(r) * sides(r)
+    print(p1)
+    print(p2)
+
+main(run)

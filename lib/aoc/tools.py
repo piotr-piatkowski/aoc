@@ -60,6 +60,14 @@ HV_DIRS = {(-1, 0), (1, 0), (0, -1), (0, 1)}
 
 C_ALL_DIRS = [complex(dx, dy) for dx, dy in ALL_DIRS]
 C_HV_DIRS = [complex(dx, dy) for dx, dy in HV_DIRS]
+C_CORNER_DIRS = list(set(C_ALL_DIRS) - set(C_HV_DIRS))
+
+C_CORNER_DIRS_ROUND = [
+    complex(-1, -1),
+    complex(1, -1),
+    complex(1, 1),
+    complex(-1, 1),
+]
 
 debug = False
 
