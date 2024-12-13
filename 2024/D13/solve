@@ -23,18 +23,14 @@ def run(args):
             xp += delta
             yp += delta
 
-            a, b = symbols('a b')
+            a, b = symbols('a b', integer=True, nonnegative=True)
 
             r = solve([
                 Eq(xp, a * dxa + b * dxb),
                 Eq(yp, a * dya + b * dyb)
             ])
 
-            ok = True
-            for v in r.values():
-                if not v.is_integer or v < 0:
-                    ok = False
-            if ok:
+            if r:
                 cost += 3 * r[a] + r[b]
 
         print(cost)
