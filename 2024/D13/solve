@@ -1,0 +1,44 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import chain
+from functools import cache
+
+from sympy import symbols, solve, Eq
+def run(args):
+
+    input_parts = read_all(args).split("\n\n")
+
+    for delta in (0, 10000000000000):
+        cost = 0
+        for ip in input_parts:
+            btn_a, btn_b, prize = ip.splitlines()
+            m1 = re.search(r'X\+(\d+), Y\+(\d+)', btn_a)
+            m2 = re.search(r'X\+(\d+), Y\+(\d+)', btn_b)
+            m3 = re.search(r'X=(\d+), Y=(\d+)', prize)
+            assert m1 and m2 and m3
+            dxa, dya = int(m1.group(1)), int(m1.group(2))
+            dxb, dyb = int(m2.group(1)), int(m2.group(2))
+            xp, yp = int(m3.group(1)), int(m3.group(2))
+            xp += delta
+            yp += delta
+
+            a, b = symbols('a b')
+
+            r = solve([
+                Eq(xp, a * dxa + b * dxb),
+                Eq(yp, a * dya + b * dyb)
+            ])
+
+            ok = True
+            for v in r.values():
+                if not v.is_integer or v < 0:
+                    ok = False
+            if ok:
+                cost += 3 * r[a] + r[b]
+
+        print(cost)
+
+
+
+main(run)
