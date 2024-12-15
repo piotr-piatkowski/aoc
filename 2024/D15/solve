@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
 from aoc.tools import *
-from itertools import chain
-from functools import cache
 
 def display(M, pos):
     W = max(int(p.real) for p in M) + 1
