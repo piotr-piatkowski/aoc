@@ -1,0 +1,101 @@
+#!/usr/bin/python3
+
+import math
+from aoc.tools import *
+from itertools import chain
+
+def display(R, W, H):
+    C = defaultdict(int)
+    for r in R:
+        C[(r.x, r.y)] += 1
+    for y in range(H):
+        for x in range(W):
+            if C[(x,y)] > 0:
+                print(C[(x,y)], end='')
+            else:
+                print('.', end='')
+        print()
+
+def entropy(R, W, H):
+    C = defaultdict(int)
+    for r in R:
+        C[(r.x, r.y)] += 1
+    s = 0
+    for r in R:
+        for dx, dy in ALL_DIRS:
+            s += C[(r.x + dx, r.y + dy)]
+    return -s
+
+class Robot:
+    x = 0
+    y = 0
+    vx = 0
+    vy = 0
+
+    def __init__(self, s):
+        m = re.match(r"p=(\d+),(\d+) v=(-?\d+),(-?\d+)", s)
+        assert m, s
+        self.x = int(m.group(1))
+        self.y = int(m.group(2))
+        self.vx = int(m.group(3))
+        self.vy = int(m.group(4))
+
+    def move(self, steps, W, H):
+        self.x += self.vx * steps
+        self.y += self.vy * steps
+        self.x %= W
+        self.y %= H
+
+    def quadrant(self, W, H):
+        if self.x == W // 2 or self.y == H // 2:
+            return None
+        qx = 0 if self.x < W // 2 else 1
+        qy = 0 if self.y < H // 2 else 1
+        return (qx, qy)
+
+
+def calc_part1(R, W, H):
+    Q = defaultdict(int)
+    for r in R:
+        q = r.quadrant(W, H)
+        if q:
+            Q[q] += 1
+
+    p1 = 1
+    for q in Q.values():
+        p1 *= q
+    return p1
+
+
+def run(args):
+
+    W = 11
+    H = 7
+    W = 101
+    H = 103
+    R = []
+    for line in read_lines(args):
+        R.append(Robot(line))
+
+    min_entropy = entropy(R, W, H)
+    min_step = 0
+    for step in range(1, W*H):
+        for r in R:
+            r.move(1, W, H)
+
+        if step == 100:
+            print(calc_part1(R, W, H))
+
+        e = entropy(R, W, H)
+        if e < min_entropy:
+            min_entropy = e
+            min_step = step
+        #     display(R, W, H)
+        #     input(f"Step {step} - Entropy: {e} (min: {min_entropy})")
+        # else:
+        #     print(f"Step {step} - Entropy: {e} (min: {min_entropy})")
+
+    print(min_step)
+
+
+main(run)
