@@ -1,0 +1,97 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import chain
+from functools import cache
+
+def display(M, pos):
+    W = max(int(p.real) for p in M) + 1
+    H = max(int(p.imag) for p in M) + 1
+    for y in range(H):
+        for x in range(W):
+            if complex(x, y) == pos:
+                print('@', end='')
+            else:
+                print(M[complex(x, y)], end='')
+        print()
+
+def gps_sum(M):
+    sum = 0
+    for p, c in M.items():
+        if c in 'O[':
+            sum += int(p.real + 100 * p.imag)
+    return sum
+
+def other_half(M, p):
+    if M[p] == '[':
+        return p + DIR_R
+    else:
+        return p + DIR_L
+
+def can_move(M, p, dir):
+    if M[p+dir] == 'O':
+        return can_move(M, p+dir, dir)
+    elif M[p+dir] in '[]':
+        h2 = other_half(M, p+dir)
+        assert set([M[p+dir], M[h2]]) == set('[]')
+        if dir in (DIR_R, DIR_L):
+            return can_move(M, h2, dir)
+        else:
+            return (
+                can_move(M, p+dir, dir) and 
+                can_move(M, h2, dir)
+            )
+    else:
+        return M[p+dir] == '.'
+
+def move(M, p, dir):
+    if M[p+dir] in '[]':
+        move(M, other_half(M, p+dir), dir)
+        move(M, p+dir, dir)
+    elif M[p+dir] == 'O':
+        move(M, p+dir, dir)
+
+    M[p+dir] = M[p]
+    M[p] = '.'
+
+def run(args):
+
+    inp_map, moves = read_all(args).split("\n\n")
+
+    for part in (1, 2):
+
+        if part == 2:
+            inp_map = (
+                inp_map
+                .replace("O", "[]")
+                .replace("#", "##")
+                .replace(".", "..")
+                .replace("@", "@.")
+            )
+
+        M = defaultdict(lambda: '#')
+
+        for y, line in enumerate(inp_map.splitlines()):
+            for x, c in enumerate(line):
+                if c == '@':
+                    start = complex(x, y)
+                    c = '.'
+                M[complex(x,y)] = c
+
+        if args.debug:
+            display(M, start)
+
+        pos = start
+        for m in moves.replace("\n", ""):
+            dir = DMAP[m]
+            if can_move(M, pos, dir):
+                move(M, pos, dir)
+                pos += dir
+            if args.debug:
+                print("After move ", m)
+                display(M, pos)
+                input("ENTER")
+
+        print(gps_sum(M))
+
+main(run)

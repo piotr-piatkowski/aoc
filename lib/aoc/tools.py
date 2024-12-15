@@ -58,6 +58,19 @@ ALL_DIRS = {(dx, dy)
             if (dx, dy) != (0, 0)}
 HV_DIRS = {(-1, 0), (1, 0), (0, -1), (0, 1)}
 
+DIR_L = complex(-1, 0)
+DIR_R = complex(1, 0)
+DIR_U = complex(0, -1)
+DIR_D = complex(0, 1)
+
+DMAP = {
+    "<": DIR_L,
+    ">": DIR_R,
+    "^": DIR_U,
+    "v": DIR_D,
+}
+
+
 C_ALL_DIRS = [complex(dx, dy) for dx, dy in ALL_DIRS]
 C_HV_DIRS = [complex(dx, dy) for dx, dy in HV_DIRS]
 C_CORNER_DIRS = list(set(C_ALL_DIRS) - set(C_HV_DIRS))
