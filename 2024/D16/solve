@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import permutations, combinations
+import networkx as nx
+
+def display(M, nodes, path=None):
+    W = max(int(p.real) for p in M) + 2
+    H = max(int(p.imag) for p in M) + 2
+    if path:
+        path = [p[0] for p in path]
+    else:
+        path = []
+    for y in range(H):
+        for x in range(W):
+            p = complex(x, y)
+            if p in path:
+                pos = path.index(p)
+                print(f'{pos:02d}', end='')
+            elif p in nodes:
+                print('<>', end='')
+            elif p in M:
+                print('..', end='')
+            else:
+                print('##', end='')
+        print()
+
+def rot_cost(d1, d2):
+    if d1 == d2:
+        return 0
+    elif d1.real == d2.real or d1.imag == d2.imag:
+        return 2000
+    else:
+        return 1000
+
+def find_path(M, nodes, p, d):
+    cost = 0
+    points = {p}
+    while True:
+        p = p + d
+        points.add(p)
+        cost += 1
+        if p in nodes:
+            return p, d, cost, points
+        if p not in M:
+            return None
+        if p + d not in M:
+            if p + turn_left(d) in M:
+                d = turn_left(d)
+                cost += 1000
+            elif p + turn_right(d) in M:
+                d = turn_right(d)
+                cost += 1000
+            else:
+                return None
+
+def run(args):
+
+    M = set()
+
+    for y, line in enumerate(read_lines(args)):
+        for x, c in enumerate(line):
+            if c == 'S':
+                start = complex(x, y)
+            elif c == 'E':
+                end = complex(x, y)
+            if c != '#':
+                M.add(complex(x, y))
+
+    assert start
+    assert end
+
+    G = nx.DiGraph()
+
+    # Collect points, that have more than 2 neighbors
+    nodes = {start, end}
+    for p in M:
+        # count neighbors
+        cnt = sum(1 for d in C_HV_DIRS if p + d in M)
+        if cnt > 2 or p in (start, end):
+            nodes.add(p)
+            # Add edges from p to p with rotation to right or left
+            cost = 0 if p == end else 1000
+            for d1 in C_HV_DIRS:
+                for d2 in (turn_left(d1), turn_right(d1)):
+                    G.add_edge((p, d1), (p, d2), weight=cost, points={p})
+
+    for p in nodes:
+        for d in C_HV_DIRS:
+            if r := find_path(M, nodes, p, d):
+                p2, d2, cost, points = r
+                G.add_edge((p, d), (p2, d2), weight=cost, points=points)
+
+    print(nx.shortest_path_length(G, (start, DIR_R), (end, DIR_U),
+                                  weight="weight"))
+
+    points = {start, end}
+    for path in nx.all_shortest_paths(G, (start, DIR_R), (end, d),
+                                      weight="weight"):
+        for p1, p2 in zip(path, path[1:]):
+            points.update(G[p1][p2]['points'])
+
+    print(len(points))
+
+main(run)

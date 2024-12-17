@@ -70,6 +70,11 @@ DMAP = {
     "v": DIR_D,
 }
 
+def turn_left(d):
+    return d * complex(0, -1)
+
+def turn_right(d):
+    return d * complex(0, 1)
 
 C_ALL_DIRS = [complex(dx, dy) for dx, dy in ALL_DIRS]
 C_HV_DIRS = [complex(dx, dy) for dx, dy in HV_DIRS]
@@ -81,6 +86,27 @@ C_CORNER_DIRS_ROUND = [
     complex(1, 1),
     complex(-1, 1),
 ]
+
+# For debug prints, PH=point human, DH=direction human,
+# PDH=point direction human
+def PH(p):
+    return f"({int(p.real)}, {int(p.imag)})"
+
+def DH(d):
+    if d == DIR_U:
+        return '^'
+    elif d == DIR_D:
+        return 'v'
+    elif d == DIR_L:
+        return '<'
+    elif d == DIR_R:
+        return '>'
+    else:
+        return '?'
+
+def PDH(p):
+    return f"({PH(p[0])}, {DH(p[1])})"
+
 
 debug = False
 
