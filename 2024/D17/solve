@@ -1,0 +1,152 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import permutations, combinations
+import networkx as nx
+
+INSTR_MAP = {
+    0: "adv",
+    1: "bxl",
+    2: "bst",
+    3: "jnz", 
+    4: "bxc",
+    5: "out",
+    6: "bdv",
+    7: "cdv",
+}
+
+class Comp:
+    A: int = 0
+    B: int = 0
+    C: int = 0
+    IP: int = 0
+    OUT: list[int] = []
+    program: list[int]
+
+    def __init__(self, input):
+        for line in input.splitlines():
+            if m := re.match(r"Register (\w): (\d+)", line):
+                setattr(self, m.group(1), int(m.group(2)))
+            elif m := re.match(r"Program: (.+)", line):
+                self.program = list(map(int, m.group(1).split(",")))
+            elif line == "" or line.startswith("#"):
+                pass
+            else:
+                raise ValueError(f"Invalid input: {line}")
+
+    def disassemble(self):
+        for i in range(0, len(self.program), 2):
+            instr = INSTR_MAP[self.program[i]]
+            lop = self.program[i + 1]
+            cop = lop
+            if cop in (4, 5, 6):
+                cop = "ABC"[cop - 4]
+            instr = getattr(self, instr).__doc__
+            instr = (
+                instr
+                .replace("{lop}", str(lop))
+                .replace("{cop}", str(cop))
+            )
+            print(f"# {i:2d}: {instr}")
+
+    def dump(self, prefix: str):
+        print(f"{prefix} A: {self.A}, B: {self.B}, C: {self.C}, IP: {self.IP}")
+
+    def run(self, A = None):
+        if A is not None:
+            self.A = A
+        self.IP = 0
+        self.OUT = []
+        #self.dump("")
+        while self.IP < len(self.program):
+            instr = self.program[self.IP]
+            arg = self.program[self.IP + 1]
+            instr = INSTR_MAP[instr]
+            # print(f"{instr}({arg})")
+            getattr(self, instr)(arg)
+            self.IP += 2
+            # self.dump("")
+        return self.OUT
+    
+    def print_out(self):
+        print(','.join(map(str,self.OUT)))
+
+    def combo(self, a):
+        assert a < 7
+        if a == 4:
+            return self.A
+        elif a == 5:
+            return self.B
+        elif a == 6:
+            return self.C
+        else:
+            return a
+
+    def adv(self, arg: int): 
+        "A = A >> {cop}"
+        self.A = self.A // (2 ** self.combo(arg))
+
+    def bxl(self, arg: int):
+        "B = B ^ {lop}"
+        self.B = self.B ^ arg
+
+    def bst(self, arg: int):
+        "B = {cop} % 8"
+        self.B = self.combo(arg) % 8
+
+    def jnz(self, arg: int):
+        "JNZ {lop}"
+        if self.A != 0:
+            self.IP = arg - 2
+
+    def bxc(self, arg: int):
+        "B = B ^ C"
+        self.B = self.B ^ self.C
+
+    def out(self, arg: int):
+        "OUT {cop} % 8"
+        self.OUT.append(self.combo(arg) % 8)
+
+    def bdv(self, arg: int):
+        "B = A >> {cop}"
+        self.B = self.A // 2 ** self.combo(arg)
+
+    def cdv(self, arg: int):
+        "C = A >> {cop}"
+        self.C = self.A // 2 ** self.combo(arg)
+
+
+def run(args):
+
+    C = Comp(read_all(args))
+    # C.disassemble()
+
+    # part 1
+    C.run()
+    C.print_out()
+
+    # part 2
+    def calc_a(tribits):
+        A = 0
+        for i, t in enumerate(tribits):
+            A += t * (8**i)
+        return A
+
+    target = C.program
+
+    tribits = []
+    for pos in range(1, len(target)+1):
+        for next_tb in range(8):
+            A = calc_a([next_tb] + tribits)
+            out = C.run(A)
+            # print(f"{A}, {[next_tb] + tribits} => {out}")
+            #assert len(out) == len(tribits) + 1
+            if len(out) >= pos and out[-pos] == target[-pos]:
+                # print(f"Found {next_tb} at pos {pos}")
+                tribits.insert(0, next_tb)
+                break
+        else:
+            raise Exception(f"No solution found at pos {pos}")
+    print(calc_a(tribits))
+
+main(run)
