@@ -126,27 +126,18 @@ def run(args):
     C.print_out()
 
     # part 2
-    def calc_a(tribits):
-        A = 0
-        for i, t in enumerate(tribits):
-            A += t * (8**i)
-        return A
+    def find_A(target, last_a=0):
+        for i in range(8):
+            A = last_a * 8 + i
+            if A > 0:
+                res = C.run(A)
+                if res == target:
+                    return A
+                elif res == target[-len(res):]:
+                    if (a := find_A(target, A)) is not None:
+                        return a
+        return None
 
-    target = C.program
-
-    tribits = []
-    for pos in range(1, len(target)+1):
-        for next_tb in range(8):
-            A = calc_a([next_tb] + tribits)
-            out = C.run(A)
-            # print(f"{A}, {[next_tb] + tribits} => {out}")
-            #assert len(out) == len(tribits) + 1
-            if len(out) >= pos and out[-pos] == target[-pos]:
-                # print(f"Found {next_tb} at pos {pos}")
-                tribits.insert(0, next_tb)
-                break
-        else:
-            raise Exception(f"No solution found at pos {pos}")
-    print(calc_a(tribits))
+    print(find_A(C.program))
 
 main(run)
