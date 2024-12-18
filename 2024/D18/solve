@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import permutations, combinations
+import networkx as nx
+
+def display(M, pos=None):
+    W = max(int(p.real) for p in M) + 1
+    H = max(int(p.imag) for p in M) + 1
+    for y in range(H):
+        for x in range(W):
+            if complex(x,y) in M:
+                print('.', end='')
+            else:
+                print('#', end='')
+        print()
+
+def run(args):
+
+    # args.path = "ex1"
+    W = H = 71
+
+    G = nx.Graph()
+    for x in range(W):
+        for y in range(H):
+            for d in C_HV_DIRS:
+                p2 = complex(x, y) + d
+                if 0 <= p2.real < W and 0 <= p2.imag < H:
+                    G.add_edge(complex(x, y), p2)
+
+    start = complex(0, 0)
+    end = complex(W-1, H-1)
+
+    for i, l in enumerate(read_lines(args)):
+        x, y = map(int, l.split(','))
+        G.remove_node(complex(x, y))
+        # part 1
+        if i+1 == 1024:
+            print(nx.shortest_path_length(G, start, end))
+        # part 2
+        if i > 1024 and not nx.has_path(G, start, end):
+            print(f"{x},{y}")
+            break
+
+main(run)
