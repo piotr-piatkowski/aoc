@@ -1,0 +1,30 @@
+#!/usr/bin/python3
+
+from aoc.tools import *
+from itertools import permutations, combinations
+from functools import cache
+
+def run(args):
+
+    patts, towels = read_all(args).split("\n\n")
+
+    patts = patts.split(", ")
+    towels = towels.splitlines()
+
+    @cache
+    def valid(towel):
+        if towel == "":
+            return 1
+        c = 0
+        for p in patts:
+            if towel.startswith(p):
+                c += valid(towel[len(p):])
+        return c
+
+    vals = []
+    for t in towels:
+        vals.append(valid(t))
+    print(sum(v > 0 for v in vals))
+    print(sum(vals))
+
+main(run)
