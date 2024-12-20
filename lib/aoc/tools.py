@@ -4,6 +4,7 @@ import re
 import argparse
 import inspect
 import itertools
+import time
 
 from collections import defaultdict, Counter
 from copy import deepcopy
@@ -128,3 +129,22 @@ def main(run):
     global debug
     debug = args.debug
     run(args)
+
+class Timer:
+    start_ts: float = 0
+    lap_start_ts: float = 0
+
+    def start(self):
+        self.start_ts = time.time()
+        self.lap_start_ts = self.start_ts
+
+    def lap(self, name: str):
+        now = time.time()
+        lap = now - self.lap_start_ts
+        self.lap_start_ts = now
+        print(f"{name}: {lap:.6f}")
+
+    def stop(self):
+        now = time.time()
+        total = now - self.start_ts
+        print(f"Total: {total:.6f}")
